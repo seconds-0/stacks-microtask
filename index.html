@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Micro-Task Board (PoC)</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .task {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .available { background-color: #f8f9fa; }
+        .claimed { background-color: #fff3cd; }
+        .completed { background-color: #d4edda; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>Micro-Task Board (PoC)</h1>
+    <div id="wallet-section">
+        <button id="connect-wallet">Connect Wallet</button>
+        <div id="wallet-info"></div>
+    </div>
+
+    <div id="post-task-section" style="display: none;">
+        <h2>Post New Task</h2>
+        <input type="text" id="task-description" placeholder="Task description">
+        <input type="number" id="task-reward" placeholder="Reward (in uSTX)">
+        <button id="post-task">Post Task</button>
+    </div>
+
+    <div id="task-list">
+        <h2>Available Tasks</h2>
+        <!-- Tasks will be loaded here -->
+    </div>
+
+    <script src="https://unpkg.com/@stacks/connect"></script>
+    <script>
+        // Basic initialization - will be expanded in future commits
+        document.getElementById('connect-wallet').addEventListener('click', () => {
+            // Wallet connection logic will be implemented
+            console.log('Wallet connection clicked');
+        });
+    </script>
+</body>
+</html> 

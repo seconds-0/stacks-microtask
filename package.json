@@ -1,0 +1,18 @@
+{
+  "name": "stacks-microtask",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "clarinet test",
+    "check": "clarinet check"
+  },
+  "devDependencies": {
+    "@stacks/transactions": "^6.12.0",
+    "@stacks/connect": "^7.5.0",
+    "@types/jest": "^29.5.12",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 
