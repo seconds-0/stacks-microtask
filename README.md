@@ -97,9 +97,11 @@ This application can be deployed to any standard NodeJS hosting platform, includ
 2. Sign up for a [Vercel](https://vercel.com/) account
 3. Create a new project and import your GitHub repository
 4. Configure the deployment:
-   - **Build Command**: `npm run deploy:prepare`
-   - **Output Directory**: (leave as default)
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `public`
    - **Install Command**: `npm install`
+   
+Note: A `vercel.json` configuration file is included in the repository to properly configure the Node.js server deployment together with static assets.
 
 ### Deploying to DigitalOcean App Platform
 

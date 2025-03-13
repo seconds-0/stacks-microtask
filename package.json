@@ -10,7 +10,7 @@
     "serve": "python3 -m http.server 8080 || python -m http.server 8080",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "echo 'No build step required - static files ready to serve'",
+    "build": "mkdir -p public && cp -r index.html icon.png public/",
     "deploy:prepare": "npm install"
   },
   "dependencies": {

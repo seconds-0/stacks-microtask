@@ -37,12 +37,15 @@ app.use(
 // Enable CORS
 app.use(cors());
 
-// Serve static files from the root directory
-app.use(express.static(__dirname));
+// Determine the correct directory to serve static files from
+const staticDir = path.join(__dirname, process.env.VERCEL ? 'public' : '');
+
+// Serve static files from the determined directory
+app.use(express.static(staticDir));
 
 // All other GET requests not handled before will return the index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(staticDir, 'index.html'));
 });
 
 // Start the server
