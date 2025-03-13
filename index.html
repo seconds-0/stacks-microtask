@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Micro-Task Board (PoC)</title>
+    <title>Micro-Task Board - Stacks Testnet</title>
     <style>
         body { 
             font-family: Arial, sans-serif;
@@ -52,6 +52,10 @@
         button:hover {
             background-color: #0069d9;
         }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
         input {
             padding: 8px;
             border: 1px solid #ced4da;
@@ -68,12 +72,39 @@
             flex-direction: column;
             gap: 10px;
         }
+        .loader {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 6px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tx-link {
+            font-size: 12px;
+            margin-left: 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .tx-link:hover {
+            text-decoration: underline;
+        }
     </style>
+    <!-- Include Stacks.js libraries -->
+    <script src="https://unpkg.com/@stacks/connect@latest/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@stacks/transactions@latest/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@stacks/network@latest/dist/index.umd.js"></script>
 </head>
 <body>
-    <h1>Micro-Task Board (PoC)</h1>
+    <h1>Micro-Task Board - Stacks Testnet</h1>
     
-    <div id="status-message" class="status-bar">Demo mode active - no blockchain connection needed</div>
+    <div id="status-message" class="status-bar">Connect your Hiro Wallet to interact with the Micro-Task Board on Stacks Testnet</div>
     
     <div id="wallet-section">
         <button id="connect-wallet">Connect Wallet</button>
@@ -84,7 +115,7 @@
         <h2>Post New Task</h2>
         <form id="post-task-form">
             <input type="text" id="task-description" maxlength="256" placeholder="Task description" required>
-            <input type="number" id="task-reward" placeholder="Reward (in uSTX)" min="1" required>
+            <input type="number" id="task-reward" placeholder="Reward (in STX)" min="1" required>
             <button type="submit" id="post-task-btn">Post Task</button>
         </form>
     </div>
@@ -98,8 +129,22 @@
     </div>
 
     <script>
+        // Stacks Testnet configuration
+        const { StacksTestnet } = window.StacksNetwork;
+        const network = new StacksTestnet();
+        
+        // Contract details
+        // Note: Replace with your actual deployed contract address
+        const contractAddress = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+        const contractName = 'microtasks';
+
+        // Connect functionality from Stacks.js
+        const { openConnect, openSTXTransfer, UserSession, AppConfig } = window.StacksConnect;
+        const { standardPrincipalCV, stringUtf8CV, uintCV, cvToValue, callReadOnlyFunction, makeContractCall, broadcastTransaction } = window.StacksTransactions;
+
         // App state
         let userAddress = null;
+        let userSession = null;
         let allTasks = []; // All tasks from the network
         
         // DOM elements
@@ -111,6 +156,19 @@
         const noTasksEl = document.getElementById('no-tasks');
         const statusMessage = document.getElementById('status-message');
 
+        // Initialize Stacks Connect
+        const appConfig = new AppConfig(['store_write', 'publish_data']);
+        userSession = new UserSession({ appConfig });
+
+        // Check if user is already signed in
+        if (userSession.isUserSignedIn()) {
+            const userData = userSession.loadUserData();
+            userAddress = userData.profile.stxAddress.testnet;
+            showMessage('Connected to Stacks Testnet', 'success');
+            updateUI();
+            loadTasks();
+        }
+
         // Helper functions
         function showMessage(message, type = 'success') {
             statusMessage.textContent = message;
@@ -118,82 +176,249 @@
         }
 
         function formatSTX(ustx) {
-            return (ustx / 1000000).toFixed(6) + ' STX';
+            return (parseInt(ustx) / 1000000).toFixed(6) + ' STX';
         }
 
-        // Connect wallet (simulation)
+        function shortenAddress(address) {
+            return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+        }
+
+        function getExplorerTxUrl(txId) {
+            return `https://explorer.stacks.co/txid/${txId}?chain=testnet`;
+        }
+
+        // Connect wallet with Stacks Connect
         connectBtn.addEventListener('click', async () => {
-            // Use a demo address
-            userAddress = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"; 
-            showMessage('Connected with demo wallet (simulation mode)', 'success');
-            updateUI();
-            loadTasks();
+            showConnect();
         });
 
-        // Post new task
+        function showConnect() {
+            openConnect({
+                appDetails: {
+                    name: 'Micro-Task Board',
+                    icon: window.location.origin + '/icon.png',
+                },
+                redirectTo: '/',
+                onFinish: () => {
+                    const userData = userSession.loadUserData();
+                    userAddress = userData.profile.stxAddress.testnet;
+                    showMessage('Connected to Stacks Testnet', 'success');
+                    updateUI();
+                    loadTasks();
+                },
+                userSession,
+            });
+        }
+
+        // Post a new task
         postTaskForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const description = document.getElementById('task-description').value;
-            const reward = parseInt(document.getElementById('task-reward').value);
+            const rewardStx = parseFloat(document.getElementById('task-reward').value);
             
-            if (!description || isNaN(reward) || reward <= 0) {
+            if (!description || isNaN(rewardStx) || rewardStx <= 0) {
                 showMessage('Please provide a valid description and reward amount.', 'error');
                 return;
             }
+
+            // Convert STX to microSTX
+            const rewardMicroStx = rewardStx * 1000000;
             
-            // Add the new task to our simulated tasks list
-            allTasks.unshift({
-                id: allTasks.length > 0 ? Math.max(...allTasks.map(t => t.id)) + 1 : 0,
-                description: description,
-                reward: reward,
-                poster: userAddress,
-                claimer: null,
-                completed: false,
-                status: "open"
-            });
+            // Disable form during transaction
+            const submitButton = document.getElementById('post-task-btn');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.innerHTML = originalButtonText + ' <span class="loader"></span>';
             
-            showMessage('Task posted! (Simulation mode)', 'success');
-            document.getElementById('task-description').value = '';
-            document.getElementById('task-reward').value = '';
-            renderTasks();
+            try {
+                showMessage('Preparing to post task...', 'success');
+                
+                const functionArgs = [
+                    stringUtf8CV(description),
+                    uintCV(rewardMicroStx)
+                ];
+                
+                const options = {
+                    contractAddress,
+                    contractName,
+                    functionName: 'post-task',
+                    functionArgs,
+                    network,
+                    appDetails: {
+                        name: 'Micro-Task Board',
+                        icon: window.location.origin + '/icon.png',
+                    },
+                    onFinish: data => {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalButtonText;
+                        
+                        // Clear form
+                        document.getElementById('task-description').value = '';
+                        document.getElementById('task-reward').value = '';
+                        
+                        const txLink = getExplorerTxUrl(data.txId);
+                        showMessage(`Task posted! Transaction ID: ${data.txId.substr(0, 10)}...`, 'success');
+                        
+                        // Add link to status message
+                        statusMessage.innerHTML += ` <a href="${txLink}" target="_blank" class="tx-link">View transaction</a>`;
+                        
+                        // Reload tasks after a delay to allow for confirmation
+                        setTimeout(loadTasks, 3000);
+                    }
+                };
+                
+                await openSTXTransfer(options);
+                
+            } catch (e) {
+                console.error('Error posting task:', e);
+                showMessage('Error posting task: ' + e.message, 'error');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            }
         });
 
         // Claim a task
         async function claimTask(taskId, poster) {
-            const taskIndex = allTasks.findIndex(task => task.id === taskId);
-            if (taskIndex !== -1) {
-                allTasks[taskIndex].claimer = userAddress;
-                allTasks[taskIndex].status = "claimed";
-                showMessage('Task claimed! (Simulation mode)', 'success');
-                renderTasks();
+            if (!userAddress) {
+                showMessage('Please connect your wallet first.', 'error');
+                return;
+            }
+            
+            try {
+                showMessage('Preparing to claim task...', 'success');
+                
+                const functionArgs = [
+                    uintCV(taskId),
+                    standardPrincipalCV(poster)
+                ];
+                
+                const options = {
+                    contractAddress,
+                    contractName,
+                    functionName: 'claim-task',
+                    functionArgs,
+                    network,
+                    appDetails: {
+                        name: 'Micro-Task Board',
+                        icon: window.location.origin + '/icon.png',
+                    },
+                    onFinish: data => {
+                        const txLink = getExplorerTxUrl(data.txId);
+                        showMessage(`Task claimed! Transaction ID: ${data.txId.substr(0, 10)}...`, 'success');
+                        statusMessage.innerHTML += ` <a href="${txLink}" target="_blank" class="tx-link">View transaction</a>`;
+                        
+                        // Reload tasks after a delay to allow for confirmation
+                        setTimeout(loadTasks, 3000);
+                    }
+                };
+                
+                await makeContractCall(options);
+                
+            } catch (e) {
+                console.error('Error claiming task:', e);
+                showMessage('Error claiming task: ' + e.message, 'error');
             }
         }
 
         // Approve a task
         async function approveTask(taskId) {
-            const taskIndex = allTasks.findIndex(task => task.id === taskId);
-            if (taskIndex !== -1) {
-                allTasks[taskIndex].completed = true;
-                allTasks[taskIndex].status = "completed";
-                showMessage('Task approved! Reward transferred. (Simulation mode)', 'success');
-                renderTasks();
+            if (!userAddress) {
+                showMessage('Please connect your wallet first.', 'error');
+                return;
+            }
+            
+            try {
+                showMessage('Preparing to approve task...', 'success');
+                
+                const functionArgs = [
+                    uintCV(taskId)
+                ];
+                
+                const options = {
+                    contractAddress,
+                    contractName,
+                    functionName: 'approve-task',
+                    functionArgs,
+                    network,
+                    appDetails: {
+                        name: 'Micro-Task Board',
+                        icon: window.location.origin + '/icon.png',
+                    },
+                    onFinish: data => {
+                        const txLink = getExplorerTxUrl(data.txId);
+                        showMessage(`Task approved! Transaction ID: ${data.txId.substr(0, 10)}...`, 'success');
+                        statusMessage.innerHTML += ` <a href="${txLink}" target="_blank" class="tx-link">View transaction</a>`;
+                        
+                        // Reload tasks after a delay to allow for confirmation
+                        setTimeout(loadTasks, 3000);
+                    }
+                };
+                
+                await makeContractCall(options);
+                
+            } catch (e) {
+                console.error('Error approving task:', e);
+                showMessage('Error approving task: ' + e.message, 'error');
             }
         }
 
-        // Load and display tasks
-        function loadTasks() {
+        // Load and display tasks from the contract
+        async function loadTasks() {
             if (!userAddress) return;
             
-            // Load simulated tasks
-            simulateTaskLoad();
-            renderTasks();
+            showMessage('Loading tasks...', 'success');
+            
+            try {
+                const readOnlyResponse = await callReadOnlyFunction({
+                    contractAddress,
+                    contractName,
+                    functionName: 'get-all-tasks',
+                    functionArgs: [],
+                    network,
+                    senderAddress: userAddress,
+                });
+                
+                // Parse the response from the contract
+                const result = cvToValue(readOnlyResponse);
+                
+                if (result && Array.isArray(result) && result.length > 0) {
+                    allTasks = result.map((task, index) => {
+                        // Parse task data from contract format
+                        return {
+                            id: task.value['task-id'].value,
+                            description: task.value.description.value,
+                            reward: task.value.reward.value,
+                            poster: task.value.poster.value,
+                            claimer: task.value.claimer.value || null,
+                            completed: task.value.completed.value,
+                            status: task.value.status.value
+                        };
+                    }).filter(t => t !== null);
+                    
+                    renderTasks();
+                    showMessage('Tasks loaded successfully!', 'success');
+                } else {
+                    allTasks = [];
+                    noTasksEl.style.display = 'block';
+                    taskListEl.innerHTML = '';
+                    showMessage('No tasks found.', 'success');
+                }
+            } catch (e) {
+                console.error('Error loading tasks:', e);
+                showMessage('Error loading tasks: ' + e.message, 'error');
+                
+                // Use sample tasks for demo if real tasks can't be loaded
+                simulateTaskLoad();
+                renderTasks();
+            }
         }
         
         // Render tasks in UI
         function renderTasks() {
             if (allTasks.length === 0) {
                 noTasksEl.style.display = 'block';
+                taskListEl.innerHTML = '';
                 return;
             }
             
@@ -213,7 +438,7 @@
                     if (!task.claimer && !isUserTask) {
                         actionBtn = `<button onclick="claimTask(${task.id}, '${task.poster}')">Claim Task</button>`;
                     } else if (isUserTask && task.claimer) {
-                        actionBtn = `<button onclick="approveTask(${task.id})">Approve Task</button>`;
+                        actionBtn = `<button onclick="approveTask(${task.id})">Approve & Pay</button>`;
                     }
                 }
                 
@@ -234,11 +459,6 @@
             });
         }
 
-        // Shorten an address for display
-        function shortenAddress(address) {
-            return address.substring(0, 6) + '...' + address.substring(address.length - 4);
-        }
-
         // Update UI based on wallet connection
         function updateUI() {
             if (userAddress) {
@@ -252,15 +472,15 @@
             }
         }
 
-        // Simulate task data for the PoC
+        // Fallback: Simulate task data if blockchain connection fails
         function simulateTaskLoad() {
-            // Sample tasks for demonstration
+            console.log("Using simulated task data as fallback");
             allTasks = [
                 {
                     id: 0,
                     description: 'Create a logo for my project',
                     reward: 5000000, // 5 STX
-                    poster: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+                    poster: userAddress || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
                     claimer: null,
                     completed: false,
                     status: "open"
@@ -269,7 +489,7 @@
                     id: 1,
                     description: 'Write test cases for smart contract',
                     reward: 10000000, // 10 STX
-                    poster: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+                    poster: userAddress || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
                     claimer: 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG',
                     completed: false,
                     status: "claimed"
@@ -279,21 +499,14 @@
                     description: 'Fix CSS layout issues',
                     reward: 3000000, // 3 STX
                     poster: 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG',
-                    claimer: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+                    claimer: userAddress || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
                     completed: true,
                     status: "completed"
                 }
             ];
             
-            // If user is connected, add their address to the first task as poster
-            if (userAddress) {
-                allTasks[0].poster = userAddress;
-                
-                // If they're the poster for task 1, make them able to approve it
-                if (allTasks[1].poster === userAddress) {
-                    allTasks[1].claimer = 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG';
-                }
-            }
+            // Show message that we're using simulated data
+            showMessage('Using simulated task data (Testnet connection failed)', 'error');
         }
         
         // Expose functions to be called from HTML
