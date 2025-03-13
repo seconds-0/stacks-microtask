@@ -1,0 +1,18 @@
+---
+id: 0
+name: Testnet deployment
+network: testnet
+stacks-node: "https://stacks-node-api.testnet.stacks.co"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: microtasks
+            expected-sender: ST16V1X8RT0G2V2GE1Z31KM4FDJA2QRNNJYCM9NP1
+            cost: 4918
+            path: contracts/microtasks.clar
+            anchor-block-only: true
+            clarity-version: 2
+      epoch: "2.4"
