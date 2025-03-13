@@ -18,35 +18,287 @@
         .available { background-color: #f8f9fa; }
         .claimed { background-color: #fff3cd; }
         .completed { background-color: #d4edda; }
-        .error { color: #dc3545; }
+        .status-bar {
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .hidden { display: none; }
+        .flex-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        button {
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0069d9;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+        #post-task-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #post-task-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Micro-Task Board (PoC)</h1>
+    
+    <div id="status-message" class="status-bar">Demo mode active - no blockchain connection needed</div>
+    
     <div id="wallet-section">
         <button id="connect-wallet">Connect Wallet</button>
         <div id="wallet-info"></div>
     </div>
 
-    <div id="post-task-section" style="display: none;">
+    <div id="post-task-section" class="hidden">
         <h2>Post New Task</h2>
-        <input type="text" id="task-description" placeholder="Task description">
-        <input type="number" id="task-reward" placeholder="Reward (in uSTX)">
-        <button id="post-task">Post Task</button>
+        <form id="post-task-form">
+            <input type="text" id="task-description" maxlength="256" placeholder="Task description" required>
+            <input type="number" id="task-reward" placeholder="Reward (in uSTX)" min="1" required>
+            <button type="submit" id="post-task-btn">Post Task</button>
+        </form>
     </div>
 
-    <div id="task-list">
+    <div id="task-list-section">
         <h2>Available Tasks</h2>
-        <!-- Tasks will be loaded here -->
+        <div id="task-list">
+            <!-- Tasks will be loaded here -->
+            <p id="no-tasks">No tasks found. Connect your wallet to view or create tasks.</p>
+        </div>
     </div>
 
-    <script src="https://unpkg.com/@stacks/connect"></script>
     <script>
-        // Basic initialization - will be expanded in future commits
-        document.getElementById('connect-wallet').addEventListener('click', () => {
-            // Wallet connection logic will be implemented
-            console.log('Wallet connection clicked');
+        // App state
+        let userAddress = null;
+        let allTasks = []; // All tasks from the network
+        
+        // DOM elements
+        const connectBtn = document.getElementById('connect-wallet');
+        const walletInfo = document.getElementById('wallet-info');
+        const postTaskSection = document.getElementById('post-task-section');
+        const postTaskForm = document.getElementById('post-task-form');
+        const taskListEl = document.getElementById('task-list');
+        const noTasksEl = document.getElementById('no-tasks');
+        const statusMessage = document.getElementById('status-message');
+
+        // Helper functions
+        function showMessage(message, type = 'success') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-bar ${type}`;
+        }
+
+        function formatSTX(ustx) {
+            return (ustx / 1000000).toFixed(6) + ' STX';
+        }
+
+        // Connect wallet (simulation)
+        connectBtn.addEventListener('click', async () => {
+            // Use a demo address
+            userAddress = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"; 
+            showMessage('Connected with demo wallet (simulation mode)', 'success');
+            updateUI();
+            loadTasks();
         });
+
+        // Post new task
+        postTaskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const description = document.getElementById('task-description').value;
+            const reward = parseInt(document.getElementById('task-reward').value);
+            
+            if (!description || isNaN(reward) || reward <= 0) {
+                showMessage('Please provide a valid description and reward amount.', 'error');
+                return;
+            }
+            
+            // Add the new task to our simulated tasks list
+            allTasks.unshift({
+                id: allTasks.length > 0 ? Math.max(...allTasks.map(t => t.id)) + 1 : 0,
+                description: description,
+                reward: reward,
+                poster: userAddress,
+                claimer: null,
+                completed: false,
+                status: "open"
+            });
+            
+            showMessage('Task posted! (Simulation mode)', 'success');
+            document.getElementById('task-description').value = '';
+            document.getElementById('task-reward').value = '';
+            renderTasks();
+        });
+
+        // Claim a task
+        async function claimTask(taskId, poster) {
+            const taskIndex = allTasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                allTasks[taskIndex].claimer = userAddress;
+                allTasks[taskIndex].status = "claimed";
+                showMessage('Task claimed! (Simulation mode)', 'success');
+                renderTasks();
+            }
+        }
+
+        // Approve a task
+        async function approveTask(taskId) {
+            const taskIndex = allTasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                allTasks[taskIndex].completed = true;
+                allTasks[taskIndex].status = "completed";
+                showMessage('Task approved! Reward transferred. (Simulation mode)', 'success');
+                renderTasks();
+            }
+        }
+
+        // Load and display tasks
+        function loadTasks() {
+            if (!userAddress) return;
+            
+            // Load simulated tasks
+            simulateTaskLoad();
+            renderTasks();
+        }
+        
+        // Render tasks in UI
+        function renderTasks() {
+            if (allTasks.length === 0) {
+                noTasksEl.style.display = 'block';
+                return;
+            }
+            
+            noTasksEl.style.display = 'none';
+            taskListEl.innerHTML = '';
+            
+            allTasks.forEach(task => {
+                const taskEl = document.createElement('div');
+                const statusClass = task.completed ? 'completed' : (task.claimer ? 'claimed' : 'available');
+                taskEl.className = `task ${statusClass}`;
+                
+                const isUserTask = task.poster === userAddress;
+                const isUserClaimer = task.claimer === userAddress;
+                
+                let actionBtn = '';
+                if (!task.completed) {
+                    if (!task.claimer && !isUserTask) {
+                        actionBtn = `<button onclick="claimTask(${task.id}, '${task.poster}')">Claim Task</button>`;
+                    } else if (isUserTask && task.claimer) {
+                        actionBtn = `<button onclick="approveTask(${task.id})">Approve Task</button>`;
+                    }
+                }
+                
+                let status = 'Available';
+                if (task.completed) status = 'Completed';
+                else if (task.claimer) status = 'Claimed';
+                
+                taskEl.innerHTML = `
+                    <h3>${task.description}</h3>
+                    <p><strong>Reward:</strong> ${formatSTX(task.reward)}</p>
+                    <p><strong>Status:</strong> ${status}</p>
+                    <p><strong>Posted by:</strong> ${shortenAddress(task.poster)}</p>
+                    ${task.claimer ? `<p><strong>Claimed by:</strong> ${shortenAddress(task.claimer)}</p>` : ''}
+                    ${actionBtn}
+                `;
+                
+                taskListEl.appendChild(taskEl);
+            });
+        }
+
+        // Shorten an address for display
+        function shortenAddress(address) {
+            return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+        }
+
+        // Update UI based on wallet connection
+        function updateUI() {
+            if (userAddress) {
+                connectBtn.style.display = 'none';
+                walletInfo.innerHTML = `<p>Connected: ${shortenAddress(userAddress)}</p>`;
+                postTaskSection.classList.remove('hidden');
+            } else {
+                connectBtn.style.display = 'block';
+                walletInfo.innerHTML = '';
+                postTaskSection.classList.add('hidden');
+            }
+        }
+
+        // Simulate task data for the PoC
+        function simulateTaskLoad() {
+            // Sample tasks for demonstration
+            allTasks = [
+                {
+                    id: 0,
+                    description: 'Create a logo for my project',
+                    reward: 5000000, // 5 STX
+                    poster: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+                    claimer: null,
+                    completed: false,
+                    status: "open"
+                },
+                {
+                    id: 1,
+                    description: 'Write test cases for smart contract',
+                    reward: 10000000, // 10 STX
+                    poster: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+                    claimer: 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG',
+                    completed: false,
+                    status: "claimed"
+                },
+                {
+                    id: 2,
+                    description: 'Fix CSS layout issues',
+                    reward: 3000000, // 3 STX
+                    poster: 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG',
+                    claimer: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+                    completed: true,
+                    status: "completed"
+                }
+            ];
+            
+            // If user is connected, add their address to the first task as poster
+            if (userAddress) {
+                allTasks[0].poster = userAddress;
+                
+                // If they're the poster for task 1, make them able to approve it
+                if (allTasks[1].poster === userAddress) {
+                    allTasks[1].claimer = 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG';
+                }
+            }
+        }
+        
+        // Expose functions to be called from HTML
+        window.claimTask = claimTask;
+        window.approveTask = approveTask;
     </script>
 </body>
-</html> 
+</html>
