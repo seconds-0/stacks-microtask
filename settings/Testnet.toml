@@ -1,0 +1,7 @@
+[network]
+name = "testnet"
+deployment_fee_rate = 10
+
+[accounts.deployer]
+mnemonic = "replace with your testnet mnemonic"
+balance = 1000000000000 # 1000 STX in microSTX

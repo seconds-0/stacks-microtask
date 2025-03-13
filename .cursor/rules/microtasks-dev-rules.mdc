@@ -1,0 +1,135 @@
+---
+description: Developing on Clarinet JS SDK and Vitest
+globs: 
+alwaysApply: false
+---
+markdown
+
+# Decentralized Micro-Task Bounty Board - Development Guidelines
+
+When developing this project in Cursor, all agents should adhere to the following rules to ensure proper implementation according to the requirements:
+
+---
+
+### 1. Testing Framework
+- **ALWAYS** use Vitest with the Clarinet JS SDK for testing. Do **NOT** use the legacy `Clarinet.test` approach.
+- Test files should follow the pattern: `tests/<contract-name>.test.ts` (e.g., `tests/microtasks.test.ts`).
+- Use the `describe/it/expect` pattern from Vitest for structuring tests.
+- Utilize the global `simnet` object for contract interactions in tests.
+- Use custom matchers like `toBeOk()`, `toBeErr()`, `toBeSome()` for Clarity-specific assertions.
+
+---
+
+### 2. File Structure and Organization
+- Maintain the exact file structure specified in the requirements:
+
+  stacks-microtask/
+  ├── Clarinet.toml
+  ├── contracts/
+  │   └── microtasks.clar
+  ├── tests/
+  │   └── microtasks.test.ts
+  ├── vitest.config.ts
+  ├── package.json
+  └── index.html
+
+- Do not add unnecessary files or deviate from this structure without explicit instruction.
+- Any additional contracts or test files must follow the same naming conventions (e.g., `contracts/new-contract.clar` and `tests/new-contract.test.ts`).
+
+---
+
+### 3. Cross-Platform Compatibility
+- Save all text files with **UTF-8 encoding without BOM**.
+- Use **LF line endings** (not CRLF), as configured in `.gitattributes`.
+- For Windows users:
+- Use **WSL** for Clarinet operations (e.g., `clarinet check`).
+- Use **Command Prompt or PowerShell** for Node.js commands (e.g., serving the frontend).
+
+---
+
+### 4. Smart Contract Development
+- Follow Clarity best practices for contract implementation.
+- Use descriptive error codes as constants (e.g., `ERR_NO_FUNDS u1`).
+- Validate inputs thoroughly and handle all possible error cases explicitly.
+- Structure the contract with clear sections:
+- Data Variables and Maps
+- Constants (Error Codes)
+- Public Functions
+- Read-Only Functions
+- Use `(ok value)` for successful operations and `(err code)` for errors.
+
+---
+
+### 5. Testing Implementation
+- Write tests for **ALL** contract functions.
+- Cover both positive scenarios and error conditions.
+- Test balance changes when STX transfers occur.
+- Reset state between tests to avoid cross-test contamination.
+- Run tests with `npm run test:vitest` and verify coverage with `npm run coverage`.
+- Ensure tests check for specific error codes returned by contract functions.
+
+---
+
+### 6. NPM Commands
+- Use these exact NPM scripts for operations:
+- `npm run test:vitest` - Run all tests once
+- `npm run test:watch` - Run tests in watch mode
+- `npm run coverage` - Generate coverage report
+- For checking contract syntax, run `clarinet check` directly (not through NPM).
+
+---
+
+### 7. Smart Contract Interaction Pattern
+- For all contract function calls in tests, follow this pattern:
+```typescript
+const { result } = simnet.callPublicFn(
+  "microtasks",
+  "post-task",
+  [Cl.stringUtf8("Test task"), Cl.uint(1000000)],
+  wallet1
+);
+expect(result).toBeOk(Cl.uint(0));
+
+Use expect(result).toBeErr(Cl.uint(ERR_CODE)) for error assertions.
+
+8. Frontend Integration
+Keep all frontend code in a single index.html file.
+
+Use inline CSS for styling.
+
+Use the Stacks.js library for wallet connection and contract interaction.
+
+Implement responsive error handling with user-friendly messages.
+
+Handle asynchronous operations properly for blockchain transactions.
+
+Test frontend-contract integration thoroughly.
+
+9. Workflow
+Follow this workflow strictly:
+Write/modify smart contract code.
+
+Run clarinet check to verify syntax.
+
+Write tests for the contract.
+
+Run tests to verify functionality.
+
+Implement frontend changes.
+
+Test frontend integration manually.
+
+10. Documentation
+Add descriptive comments to all major functions.
+
+Document any non-obvious implementation details, assumptions, or limitations.
+
+Keep the README.md updated with any workflow changes or important notes.
+
+11. Dependencies
+Do not add additional dependencies without explicit instruction.
+
+Maintain the exact versions specified in package.json.
+
+Manage dependency versions carefully to avoid conflicts, especially with Stacks.js and the Clarinet SDK.
+
