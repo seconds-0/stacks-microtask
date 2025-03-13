@@ -1,93 +1,115 @@
-# Stacks Microtask - Decentralized Micro-Task Bounty Board
+# 🔥 Stacks Micro-Task Board
 
-A proof-of-concept decentralized application (dApp) for posting, claiming, and completing micro-tasks in exchange for STX tokens on the Stacks blockchain.
+A decentralized micro-task platform built on the Stacks blockchain. Post tasks, earn STX, and build your reputation on-chain.
 
-## Overview
+## Features
 
-This dApp allows users to:
+- **Post Tasks**: Create tasks with STX rewards
+- **Claim Tasks**: Find and claim available tasks to complete
+- **Approve & Pay**: Review completed tasks and release payment
+- **Blockchain Backed**: All data stored securely on the Stacks blockchain
+- **User-Friendly**: Modern UI with responsive design
+- **Wallet Integration**: Seamless Hiro Wallet connection
 
-- Post tasks with descriptions and STX rewards
-- Claim tasks posted by others
-- Approve completed tasks to release the STX reward to the claimer
-- View all available, claimed, and completed tasks
+## Smart Contract
 
-## Project Structure
+The Micro-Task Board is powered by the `microtasks-minimal` Clarity smart contract deployed on the Stacks testnet at:
 
-- `contracts/microtasks.clar` - Clarity smart contract
-- `tests/microtasks.test.ts` - Comprehensive test suite
-- `index.html` - Frontend interface with wallet integration
-- `settings/` - Configuration files for Clarinet
+```
+ST29ZH6JAYVPQT1BRRFZ3K0EJCT0W50Q5E309N45A.microtasks-minimal
+```
 
-## Prerequisites
+## Local Development
 
-- [Node.js](https://nodejs.org/) >= 18.0.0
-- [Clarinet](https://github.com/hirosystems/clarinet/releases/latest) - Stacks development framework
-- [Hiro Wallet](https://wallet.hiro.so/wallet/install-web) browser extension for testing the frontend
+### Prerequisites
 
-## Setup
+- Node.js (v18 or higher)
+- NPM (v7 or higher) 
+- Clarinet (for Clarity contract development)
+- A [Hiro Wallet](https://wallet.hiro.so/) for testing
 
-1. Clone the repository
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/stacks-microtask.git
+   cd stacks-microtask
+   ```
+
 2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm install
-```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Development
+4. Open [http://localhost:8080](http://localhost:8080) in your browser.
 
-### Check Contract Syntax
+## Deployment
 
-```bash
-npm run check
-# or directly with Clarinet
-clarinet check
-```
+This application can be deployed to any standard NodeJS hosting platform, including:
 
-### Run Tests
+### Deploying to Render
 
-```bash
-npm run test
-# or directly with Clarinet
-clarinet test
-```
+1. Fork this repository to your GitHub account
+2. Sign up for a [Render](https://render.com/) account 
+3. Create a new Web Service
+4. Connect your GitHub repository
+5. Configure the deployment:
+   - **Build Command**: `npm run deploy:prepare`
+   - **Start Command**: `npm start`
+   - **Environment Variables**: None required for basic setup
 
-> Note: Tests must be run using the Clarinet test runner, not with vitest directly, as Clarinet injects the `simnet` object that our tests require.
+### Deploying to Vercel
 
-### Serve the Frontend
+1. Fork this repository to your GitHub account
+2. Sign up for a [Vercel](https://vercel.com/) account
+3. Create a new project and import your GitHub repository
+4. Configure the deployment:
+   - **Build Command**: `npm run deploy:prepare`
+   - **Output Directory**: (leave as default)
+   - **Install Command**: `npm install`
 
-Use the built-in script to serve the frontend:
+### Deploying to DigitalOcean App Platform
 
-```bash
-npm run serve
-```
+1. Sign up for a [DigitalOcean](https://digitalocean.com/) account
+2. Create a new App
+3. Connect your GitHub repository
+4. Configure the deployment:
+   - **Environment**: Node.js
+   - **Build Command**: `npm run deploy:prepare`
+   - **Run Command**: `npm start`
 
-Then navigate to `http://localhost:8080` in your browser.
+## Contract Development
+
+The Clarity smart contracts are located in the `contracts/` directory. For contract development and testing:
+
+1. Check contract syntax:
+   ```bash
+   npm run check
+   ```
+
+2. Run contract tests:
+   ```bash
+   npm run test
+   ```
+
+3. Deploy contract using Clarinet:
+   ```bash
+   clarinet deploy --testnet
+   ```
 
 ## Smart Contract Details
 
-The Clarity smart contract (`microtasks.clar`) implements:
+The Stacks Micro-Task Board uses a Clarity smart contract with the following main functions:
 
-### Public Functions:
-
-- `post-task` - Creates a new task with a description and STX reward
-  - Parameters: `description (string-utf8 256)`, `reward (uint)`
-  - Returns: Task ID if successful
-
-- `claim-task` - Allows a user to claim an available task
-  - Parameters: `task-id (uint)`, `poster (principal)`
-  - Returns: `true` if successful
-
-- `approve-task` - Allows the task poster to approve a claimed task and release the STX reward
-  - Parameters: `task-id (uint)`
-  - Returns: `true` if successful
-
-### Read-Only Functions:
-
-- `get-task` - Retrieves information about a specific task
-  - Parameters: `task-id (uint)`, `poster (principal)`
-  - Returns: Task details or `none` if not found
-
-- `get-all-tasks` - Retrieves a list of tasks (with limits for this PoC implementation)
+- `post-task`: Create a new task with a description and STX reward
+- `claim-task`: Claim an available task 
+- `approve-task`: Approve a completed task and transfer the reward
+- `get-task`: Retrieve information about a specific task
 
 ### Data Structure:
 
@@ -96,41 +118,14 @@ Tasks are stored with the following properties:
 - `reward`: STX reward amount (uint)
 - `poster`: Address of the task creator (principal)
 - `claimer`: Address of the claimer, if claimed (optional principal)
-- `completed`: Whether the task is completed (boolean)
 - `status`: Current task status ("open", "claimed", or "completed")
 
-## Frontend
+## Resources
 
-The frontend interface provides:
-
-- Stacks wallet connection with Stacks.js
-- Simple form for posting new tasks
-- Visual task listing with different styling based on status
-- Action buttons for claiming and approving tasks
-- Status notifications for transaction confirmations
-
-## Testing
-
-The test suite covers:
-
-- Task posting functionality
-- Task claiming functionality
-- Task approval and reward payment
-- Error handling for various edge cases
-- State transitions between task statuses
-
-## Notes
-
-This is a proof-of-concept implementation. For a production application, consider adding:
-
-- Better error handling and input validation
-- Pagination for task listing
-- User profiles and reputation systems
-- Task filtering and search capabilities
-- Task dispute resolution mechanisms
-- Additional security measures against spam and abuse
-- Task categories and tags
-- Time limits for task completion
+- [Stacks Documentation](https://docs.stacks.co/)
+- [Clarity Language Reference](https://docs.stacks.co/clarity/language-overview)
+- [Hiro Wallet](https://wallet.hiro.so/)
+- [Stacks Explorer](https://explorer.stacks.co/?chain=testnet)
 
 ## License
 

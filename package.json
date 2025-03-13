@@ -7,21 +7,35 @@
     "test:watch": "vitest",
     "coverage": "vitest run -- --coverage --costs",
     "check": "clarinet check",
-    "serve": "python3 -m http.server 8080 || python -m http.server 8080"
+    "serve": "python3 -m http.server 8080 || python -m http.server 8080",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'No build step required - static files ready to serve'",
+    "deploy:prepare": "npm install"
   },
   "dependencies": {
     "@hirosystems/clarinet-sdk": "^2.3.0",
-    "@stacks/transactions": "^6.12.0",
-    "@stacks/connect": "^7.5.0"
+    "@noble/hashes": "^1.7.1",
+    "@scure/bip32": "^1.6.2",
+    "@stacks/connect": "^7.5.0",
+    "@stacks/network": "^7.0.2",
+    "@stacks/transactions": "^6.17.0",
+    "bip39": "^3.1.0",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "helmet": "^7.2.0",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
+    "@vitest/coverage-v8": "^1.3.1",
+    "nodemon": "^3.0.3",
     "typescript": "^5.3.3",
     "vitest": "^1.3.1",
-    "@vitest/coverage-v8": "^1.3.1",
-    "vitest-environment-clarinet": "^2.0.0"
+    "vitest-environment-clarinet": "^2.3.0"
   },
   "engines": {
     "node": ">=18.0.0"
   }
-} 
+}

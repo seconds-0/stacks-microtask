@@ -5,10 +5,47 @@ authors = []
 telemetry = false
 cache_dir = "./.cache"
 
+# Original contract
 [contracts.microtasks]
 path = "contracts/microtasks.clar"
 clarity_version = 2
-epoch = 2.4
+epoch = "2.0"
+
+# New contract with Clarity 2 (correct epoch)
+[contracts.microtasks-v7]
+path = "contracts/microtasks-v7.clar"
+clarity_version = 2
+epoch = "2.0"
+
+# Minimal Hello World contract
+[contracts.hello-world-c43fe8da]
+path = "contracts/hello-world-c43fe8da.clar"
+clarity_version = 2
+epoch = "2.0"
+
+# New epoch-corrected contract
+[contracts.hello-world-correct-epoch]
+path = "contracts/hello-world-correct-epoch.clar"
+clarity_version = 2
+epoch = "2.0"
+
+# Final microtasks contract with epoch 2.0
+[contracts.microtasks-epoch2]
+path = "contracts/microtasks-epoch2.clar"
+clarity_version = 2
+epoch = "2.0"
+
+# Ultra-minimal test contract
+[contracts.minimal-test]
+path = "contracts/minimal-test.clar"
+clarity_version = 2
+epoch = "2.0"
+
+# Minimal microtasks contract
+[contracts.microtasks-minimal]
+path = "contracts/microtasks-minimal.clar"
+clarity_version = 2
+epoch = "2.0"
 
 [repl.analysis]
 passes = ["check_checker"]
@@ -17,4 +54,8 @@ passes = ["check_checker"]
 strict = true
 trusted_sender = false
 trusted_caller = false
-callee_filter = false 
+callee_filter = false
+
+# The deployer script will use this 
+[project.deployer]
+private-key = "ed491076ac8f2446f5840a241cc16382207e4984b1ac7268ba39e5ff96672a7c" 

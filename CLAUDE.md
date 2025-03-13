@@ -1,5 +1,10 @@
 # CLAUDE.md - Stacks Microtask Project Reference
 
+## Session Management
+
+- After completing a major task or when using `/compact`, summarize work done in memory.md
+- Log significant changes, challenges overcome, and important decisions made
+
 ## Build/Test Commands
 
 - `npm run test` - Run tests once with vitest
