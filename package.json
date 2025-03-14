@@ -10,7 +10,8 @@
     "serve": "python3 -m http.server 8080 || python -m http.server 8080",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "mkdir -p public && cp -r index.html icon.png public/ && cp node_modules/@stacks/connect/dist/umd/index.umd.js public/stacks-connect.js",
+    "build": "echo 'EMERGENCY BUILD V6' && mkdir -p public && cp -r index.html icon.png public/ && node -e \"require('fs').writeFileSync('public/timestamp.txt', new Date().toString()); console.log('Timestamp created at: ' + new Date())\"",
+    "vercel-build": "npm run build",
     "deploy:prepare": "npm install && npm run build"
   },
   "dependencies": {
