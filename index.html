@@ -7,18 +7,24 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <style>
         :root {
-            --primary: #5546ff;
-            --primary-hover: #4035e0;
-            --secondary: #f13075;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --border: #e2e8f0;
-            --gray: #94a3b8;
+            /* DARK THEME COLORS */
+            --primary: #8055ff;
+            --primary-hover: #6a46e0;
+            --secondary: #ff4081;
+            --light: #2d2d30;
+            --dark: #e9e9e9;
+            --success: #4caf7d;
+            --warning: #ffb74d;
+            --danger: #ff5252;
+            --info: #64b5f6;
+            --border: #444444;
+            --gray: #aaaaaa;
             --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
+            
+            /* DARK THEME BACKGROUND */
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-card: #2d2d30;
         }
         
         * {
@@ -31,10 +37,10 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.5;
             color: var(--dark);
-            background-color: #f9fafb;
+            background-color: var(--bg-primary);
             background-image: 
-                radial-gradient(at 10% 10%, rgba(85, 70, 255, 0.05) 0px, transparent 50%),
-                radial-gradient(at 90% 90%, rgba(241, 48, 117, 0.05) 0px, transparent 50%);
+                radial-gradient(at 10% 10%, rgba(128, 85, 255, 0.1) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(255, 64, 129, 0.1) 0px, transparent 50%);
             min-height: 100vh;
         }
         
@@ -117,7 +123,7 @@
         }
         
         .btn-light {
-            background-color: white;
+            background-color: var(--bg-secondary);
             color: var(--dark);
             border: 1px solid var(--border);
         }
@@ -125,6 +131,7 @@
         .btn-light:hover {
             background-color: var(--light);
             transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         
         .btn-success {
@@ -159,9 +166,9 @@
             max-width: 350px;
             padding: 1rem;
             border-radius: 0.5rem;
-            background: white;
+            background: var(--bg-secondary);
             color: var(--dark);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
             z-index: 1000;
             animation: slideIn 0.3s ease-out forwards;
             border-left: 4px solid var(--primary);
@@ -203,9 +210,9 @@
         }
         
         .card {
-            background: white;
+            background: var(--bg-card);
             border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             margin-bottom: 1.5rem;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -214,7 +221,7 @@
         
         .card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
         }
         
         .card-header {
@@ -223,6 +230,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background-color: var(--bg-secondary);
         }
         
         .card-body {
@@ -232,7 +240,7 @@
         .card-footer {
             padding: 1.25rem 1.5rem;
             border-top: 1px solid var(--border);
-            background-color: rgba(248, 249, 250, 0.5);
+            background-color: rgba(45, 45, 48, 0.7);
         }
         
         .task-item {
@@ -241,9 +249,10 @@
             padding: 1.5rem;
             margin-bottom: 1rem;
             transition: all 0.2s ease;
-            background-color: white;
+            background-color: var(--bg-secondary);
             position: relative;
             overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
         }
         
         .task-item::before {
@@ -340,7 +349,7 @@
             font-weight: 400;
             line-height: 1.5;
             color: var(--dark);
-            background-color: white;
+            background-color: var(--bg-secondary);
             background-clip: padding-box;
             border: 1px solid var(--border);
             border-radius: 0.5rem;
@@ -350,11 +359,11 @@
         .form-control:focus {
             border-color: var(--primary);
             outline: 0;
-            box-shadow: 0 0 0 3px rgba(85, 70, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(128, 85, 255, 0.25);
         }
         
         .form-control::placeholder {
-            color: #a0aec0;
+            color: #888888;
             opacity: 1;
         }
         
@@ -511,6 +520,12 @@
                 <div>
                     <h1>Stacks Micro-Task Board <span class="network-badge" id="network-badge">TESTNET</span></h1>
                     <p>Post tasks, earn STX, and build your reputation on the Stacks blockchain.</p>
+                    <div style="margin-top: 10px; padding: 8px 12px; background: var(--secondary); color: white; border-radius: 8px; display: inline-block; font-weight: 500;">
+                        🌙 NEW DARK MODE - Loaded: <span id="timestamp"></span>
+                    </div>
+                    <script>
+                        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+                    </script>
                 </div>
                 <div class="wallet-section">
                     <button id="connect-wallet" class="btn btn-primary">Connect Wallet</button>
