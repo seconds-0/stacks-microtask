@@ -1,15 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "./build.sh",
   "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/node",
-      "config": {
-        "build": {
-          "command": "npm run build"
-        }
-      }
-    },
     {
       "src": "server.js",
       "use": "@vercel/node"
