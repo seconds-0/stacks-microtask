@@ -1,18 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["public/**"]
-      }
-    }
-  ],
-  "routes": [
-    { "src": "/stacks-connect-shim.js", "dest": "/public/stacks-connect-shim.js" },
-    { "src": "/manifest.json", "dest": "/public/manifest.json" },
-    { "src": "/icon.png", "dest": "/public/icon.png" },
-    { "src": "/(.*)", "dest": "/public/index.html" }
-  ]
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "devCommand": "npm run dev",
+  "public": true
 }
