@@ -978,7 +978,7 @@
                     return;
                 }
                 
-                showMessage('Connecting to Leather Wallet...', 'processing');
+                showMessage('Connecting to Hiro Wallet...', 'processing');
                 try {
                     console.log('Attempting to connect to wallet...');
                     await openConnect(connectOptions);

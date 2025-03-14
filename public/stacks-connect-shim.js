@@ -73,16 +73,16 @@
       // Get the current URL as the redirect URL
       const redirectUrl = window.location.origin + window.location.pathname;
       
-      // Format for Hiro Wallet
+      // Format for Leather Wallet (formerly Hiro Wallet)
       const appParamsBase64 = btoa(JSON.stringify({
         appDetails: appDetails,
         redirect: redirectUrl
       }));
       
-      // Build the wallet URL (using Hiro wallet format)
-      const authUrl = `https://wallet.hiro.so/connect?authRequest=${appParamsBase64}`;
+      // Build the wallet URL (using Leather wallet format)
+      const authUrl = `https://wallet.leather.io/connect?authRequest=${appParamsBase64}`;
       
-      console.log("Redirecting to Hiro Wallet:", authUrl);
+      console.log("Redirecting to Leather Wallet:", authUrl);
       
       // Open the wallet in a new window
       // You could also redirect the current window with: window.location.href = authUrl;
@@ -122,11 +122,11 @@
       // Encode as base64 for the URL
       const txParamsBase64 = btoa(JSON.stringify(txParams));
       
-      // Format the wallet URL (using Hiro Wallet contract call format)
-      const txUrl = `https://wallet.hiro.so/txid?contractCall=${txParamsBase64}`;
+      // Format the wallet URL (using Leather Wallet contract call format)
+      const txUrl = `https://wallet.leather.io/txid?contractCall=${txParamsBase64}`;
       
       // Open the wallet in a new window
-      console.log("Opening Hiro Wallet for contract call:", txUrl);
+      console.log("Opening Leather Wallet for contract call:", txUrl);
       window.open(txUrl, '_blank', 'width=450,height=700');
       
       return Promise.resolve({ txUrl });
