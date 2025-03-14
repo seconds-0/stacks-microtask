@@ -562,17 +562,8 @@
         </div>
     </div>
 
-    <!-- Import the Stacks Connect library -->
-    <script src="https://unpkg.com/@stacks/connect"></script>
-    <!-- Fallback to specific version if needed -->
-    <script>
-        if (typeof window.Connect === 'undefined' && typeof window.StacksConnect === 'undefined') {
-            console.log("Loading fallback Stacks Connect library");
-            const script = document.createElement('script');
-            script.src = "https://cdn.jsdelivr.net/npm/@stacks/connect@7.5.0/dist/umd/index.umd.js";
-            document.head.appendChild(script);
-        }
-    </script>
+    <!-- Import the Stacks Connect library - use specific version for stability -->
+    <script src="https://cdn.jsdelivr.net/npm/@stacks/connect@7.5.0/dist/umd/index.umd.js"></script>
     
     <script>
         // Contract configuration
@@ -648,41 +639,8 @@
             }
         };
         
-        // Import the required functions directly from the Connect library
-        // Use this at the global scope
-        let { openConnect, openContractCall, encodeUtf8, encodeUint } = {};
-        
-        // Initialize the library
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check for Connect object on window
-            if (typeof window.Connect !== 'undefined') {
-                ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.Connect);
-                console.log("Found Connect object on window");
-            }
-            // Also try to check for any other global objects that might contain the Connect API
-            else {
-                console.log("Available Connect-related globals:", Object.keys(window).filter(k => 
-                    k.toLowerCase().includes('connect') || 
-                    k.toLowerCase().includes('stacks')));
-                
-                // Inspect window object for possible matches
-                for (const key of Object.keys(window)) {
-                    const obj = window[key];
-                    if (obj && typeof obj === 'object') {
-                        if (typeof obj.openConnect === 'function') {
-                            console.log(`Found Connect API in window.${key}`);
-                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (!openConnect) {
-                console.error("Could not find Connect API on window object");
-                showMessage("Error loading Stacks Connect library. Please refresh the page.", "error");
-            }
-        });
+        // Get Connect functions directly from window.stacksConnect
+        const { openConnect, openContractCall, encodeUtf8, encodeUint } = window.stacksConnect || {};
         
         // Connect wallet options
         const connectOptions = {
@@ -701,37 +659,32 @@
             userSession: userSession,
         };
         
-        // Connect wallet
-        connectBtn.addEventListener('click', async () => {
-            showMessage('Connecting to Hiro Wallet...', 'processing');
-            try {
-                // Debug info
-                console.log("Available global objects:", Object.keys(window).filter(k => 
-                    k.toLowerCase().includes('connect') || 
-                    k.toLowerCase().includes('stacks')));
-                
-                if (!openConnect) {
-                    // One last attempt to find the Connect API
-                    for (const key of Object.keys(window)) {
-                        const obj = window[key];
-                        if (obj && typeof obj === 'object' && typeof obj.openConnect === 'function') {
-                            console.log(`Found Connect API in window.${key} at click time`);
-                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
-                            break;
-                        }
-                    }
-                }
-                
-                if (!openConnect) {
-                    throw new Error('Stacks Connect not initialized. Try refreshing the page.');
-                }
-                
-                await openConnect(connectOptions);
-            } catch (error) {
-                console.error('Connection error:', error);
-                showMessage(`Connection error: ${error.message}`, 'error');
+        // Wait for DOM to be ready before setting up event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if Stacks Connect was loaded properly
+            if (!openConnect) {
+                showMessage("Stacks Connect library not loaded - please refresh the page", "error");
+                console.error("Stacks Connect not available - window.stacksConnect:", window.stacksConnect);
+                return;
             }
-        });
+            
+            // Connect wallet event listener
+            connectBtn.addEventListener('click', async () => {
+                // Double-check that openConnect is available
+                if (!openConnect) {
+                    showMessage("Wallet connection unavailable - please try refreshing the page", "error");
+                    console.error("openConnect is undefined");
+                    return;
+                }
+                
+                showMessage('Connecting to Hiro Wallet...', 'processing');
+                try {
+                    await openConnect(connectOptions);
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    showMessage(`Connection error: ${error.message}`, 'error');
+                }
+            });
 
         // Post new task
         postTaskForm.addEventListener('submit', async (e) => {
@@ -750,6 +703,15 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = 'Processing...';
             showMessage('Creating transaction...', 'processing', 0);
+            
+            // Double-check that openContractCall is available
+            if (!openContractCall) {
+                showMessage("Contract interaction unavailable - please try refreshing the page", "error");
+                console.error("openContractCall is undefined");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Post Task';
+                return;
+            }
             
             try {
                 await openContractCall({
@@ -807,6 +769,13 @@
                 return;
             }
             
+            // Double-check that openContractCall is available
+            if (!openContractCall) {
+                showMessage("Contract interaction unavailable - please try refreshing the page", "error");
+                console.error("openContractCall is undefined");
+                return;
+            }
+            
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
@@ -848,6 +817,13 @@
         async function approveTask(taskId) {
             if (!userAddress) {
                 showMessage('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            // Double-check that openContractCall is available
+            if (!openContractCall) {
+                showMessage("Contract interaction unavailable - please try refreshing the page", "error");
+                console.error("openContractCall is undefined");
                 return;
             }
             
@@ -899,6 +875,11 @@
                 let taskId = 0;
                 allTasks = [];
                 let tasksFound = true;
+                
+                // Check if encoding functions are available
+                if (!encodeUint) {
+                    console.warn("encodeUint function not available for API call, falling back to manual JSON encoding");
+                }
                 
                 while (tasksFound && taskId < 100) { // Limit to 100 tasks to prevent infinite loops
                     try {
@@ -1050,6 +1031,9 @@
             } else {
                 showMessage('Please connect your wallet first', 'error');
             }
+        });
+        
+        // End of DOMContentLoaded
         });
         
         // Expose functions to be called from HTML
