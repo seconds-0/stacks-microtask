@@ -576,6 +576,7 @@
         let userSession = null;
         let allTasks = [];
         let statusTimeout = null;
+        let stacksConnect = null;
         
         // DOM elements
         const connectBtn = document.getElementById('connect-wallet');
@@ -640,6 +641,20 @@
         };
         
         // Initialize Stacks Connect
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                stacksConnect = window.StacksConnect;
+                if (!stacksConnect) {
+                    console.error("StacksConnect not found on window object");
+                    showMessage("Error loading Stacks Connect library. Please refresh the page.", "error");
+                }
+            } catch (e) {
+                console.error("Error initializing Stacks Connect:", e);
+                showMessage("Error loading Stacks Connect library. Please refresh the page.", "error");
+            }
+        });
+        
+        // Connect wallet options
         const connectOptions = {
             ...appConfig,
             onFinish: ({ userSession }) => {
@@ -660,7 +675,15 @@
         connectBtn.addEventListener('click', async () => {
             showMessage('Connecting to Hiro Wallet...', 'processing');
             try {
-                await window.stacksConnect.openConnect(connectOptions);
+                if (!stacksConnect) {
+                    stacksConnect = window.StacksConnect;
+                }
+                
+                if (!stacksConnect) {
+                    throw new Error('Stacks Connect not initialized. Try refreshing the page.');
+                }
+                
+                await stacksConnect.openConnect(connectOptions);
             } catch (error) {
                 console.error('Connection error:', error);
                 showMessage(`Connection error: ${error.message}`, 'error');
@@ -686,14 +709,14 @@
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await window.stacksConnect.openContractCall({
+                await stacksConnect.openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
                     functionName: 'post-task',
                     functionArgs: [
-                        window.stacksConnect.encodeUtf8(description),
-                        window.stacksConnect.encodeUint(reward)
+                        stacksConnect.encodeUtf8(description),
+                        stacksConnect.encodeUint(reward)
                     ],
                     network: appConfig.network,
                     onFinish: async (data) => {
@@ -744,13 +767,13 @@
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await window.stacksConnect.openContractCall({
+                await stacksConnect.openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
                     functionName: 'claim-task',
                     functionArgs: [
-                        window.stacksConnect.encodeUint(taskId)
+                        stacksConnect.encodeUint(taskId)
                     ],
                     network: appConfig.network,
                     onFinish: async (data) => {
@@ -788,13 +811,13 @@
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await window.stacksConnect.openContractCall({
+                await stacksConnect.openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
                     functionName: 'approve-task',
                     functionArgs: [
-                        window.stacksConnect.encodeUint(taskId)
+                        stacksConnect.encodeUint(taskId)
                     ],
                     network: appConfig.network,
                     onFinish: async (data) => {
@@ -838,7 +861,7 @@
                     try {
                         const response = await fetch(`https://api.testnet.hiro.so/v2/contracts/call-read/${contractAddress}/${contractName}/get-task?${new URLSearchParams({
                             senderAddress: userAddress,
-                            arguments: [window.stacksConnect.encodeUint(taskId)]
+                            arguments: [stacksConnect ? stacksConnect.encodeUint(taskId) : JSON.stringify({type: "uint", value: taskId.toString()})]
                         })}`);
                         
                         const data = await response.json();
