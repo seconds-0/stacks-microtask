@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "./build.sh",
+  "buildCommand": "./build.sh && date > public/buildtime.txt",
   "builds": [
     {
       "src": "server.js",
@@ -11,7 +11,26 @@
       "use": "@vercel/static"
     }
   ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/rebuild",
+      "schedule": "0 0 * * *"
+    }
+  ],
   "routes": [
+    {
+      "src": "/emergency",
+      "dest": "/public/emergency.html"
+    },
+    {
+      "src": "/buildinfo",
+      "dest": "/public/buildinfo.txt"
+    },
     {
       "src": "/stacks-connect-shim.js",
       "dest": "/public/stacks-connect-shim.js"

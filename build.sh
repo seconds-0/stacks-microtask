@@ -1,7 +1,8 @@
 #!/bin/bash
 # Explicit build script for Vercel
 
-echo "Running build.sh - forcibly copying files to public directory"
+echo "EMERGENCY BUILD SCRIPT V2 - BYPASSING ALL CACHING"
+echo "==============================================="
 
 # Make public directory if it doesn't exist
 mkdir -p public
@@ -105,4 +106,35 @@ cat > public/manifest.json << 'EOF'
 }
 EOF
 
-echo "Build script completed successfully"
+# Generate a unique timestamp file to force cache invalidation
+date > public/build-timestamp-$(date +%s).txt
+echo "Current date: $(date)" > public/buildinfo.txt
+echo "Cache busting timestamp: $(date +%s)" >> public/buildinfo.txt
+echo "Git commit: $(git rev-parse HEAD)" >> public/buildinfo.txt
+
+# Create an emergency fallback route
+cat > public/emergency.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Emergency Fallback</title>
+  <style>
+    body { 
+      background-color: red;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    h1 { font-size: 3em; }
+  </style>
+</head>
+<body>
+  <h1>EMERGENCY FALLBACK PAGE</h1>
+  <p>This confirms the build script ran: $(date)</p>
+  <p>If you're seeing this, the deployment process is working but routing may be broken.</p>
+</body>
+</html>
+EOF
+
+echo "Build script completed successfully with emergency overrides"
