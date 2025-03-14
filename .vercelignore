@@ -1,6 +1,5 @@
-# Ignore everything except what we need
-*
-!public/**
-!package.json
-!vercel.json
-!server.js
+# Only ignore specific files, not everything
+node_modules
+.git
+.gitignore
+*.log
