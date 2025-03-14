@@ -609,8 +609,6 @@
         const refreshBtn = document.getElementById('refresh-btn');
         const networkBadge = document.getElementById('network-badge');
         
-        // No longer need dynamic script loading
-        
         // Helper functions
         function showMessage(message, type = 'success', duration = 5000) {
             // Clear any existing timeout
@@ -652,6 +650,35 @@
             return (ustx / 1000000).toFixed(6) + ' STX';
         }
         
+        // Shorten an address for display
+        function shortenAddress(address) {
+            return address.substring(0, 5) + '...' + address.substring(address.length - 4);
+        }
+
+        // Update UI based on wallet connection
+        function updateUI() {
+            if (userAddress) {
+                connectBtn.classList.add('hidden');
+                walletInfo.classList.remove('hidden');
+                
+                // Create initials for avatar
+                const initials = userAddress.substring(2, 4).toUpperCase();
+                
+                walletInfo.innerHTML = `
+                    <div class="address-badge">
+                        <div class="profile-avatar">${initials}</div>
+                        ${shortenAddress(userAddress)}
+                    </div>
+                `;
+                
+                postTaskSection.classList.remove('hidden');
+            } else {
+                connectBtn.classList.remove('hidden');
+                walletInfo.classList.add('hidden');
+                postTaskSection.classList.add('hidden');
+            }
+        }
+        
         // Configure Stacks Connect
         const appConfig = {
             appName: 'Stacks Micro-Task Board',
@@ -679,171 +706,6 @@
             userSession: userSession,
         };
         
-        // Initialize application after script is loaded
-        async function initializeApp() {
-            try {
-                console.log('Initializing Stacks Connect from window.stacksConnect');
-                
-                // Dump complete debug info to console
-                console.log('DETAILED DEBUG INFO:');
-                console.log('Window object has stacksConnect:', typeof window.stacksConnect);
-                console.log('Window object has Connect:', typeof window.Connect);
-                if (window.stacksConnect) {
-                    console.log('stacksConnect keys:', Object.keys(window.stacksConnect));
-                    console.log('stacksConnect openConnect type:', typeof window.stacksConnect.openConnect);
-                }
-                if (window.Connect) {
-                    console.log('Connect keys:', Object.keys(window.Connect));
-                    console.log('Connect openConnect type:', typeof window.Connect.openConnect);
-                }
-                
-                // Debug info - log what's available on window
-                console.log('Available objects on window:', Object.keys(window).filter(k => 
-                    k.toLowerCase().includes('connect') || 
-                    k.toLowerCase().includes('stacks')));
-                
-                // Always make sure global functions are defined for HTML
-                window.claimTask = claimTask;
-                window.approveTask = approveTask;
-                
-                if (window.stacksConnect && typeof window.stacksConnect.openConnect === 'function') {
-                    console.log('Successfully found openConnect in window.stacksConnect');
-                    
-                    // Get the functions from window.stacksConnect
-                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.stacksConnect);
-                    
-                    // Set up event listeners once we have the functions
-                    setupEventListeners();
-                } else if (window.Connect && typeof window.Connect.openConnect === 'function') {
-                    // Try alternate location (sometimes it loads as window.Connect)
-                    console.log('Found openConnect in window.Connect instead');
-                    
-                    // Get the functions from window.Connect
-                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.Connect);
-                    
-                    // Set up event listeners once we have the functions
-                    setupEventListeners();
-                } else {
-                    // Last resort: loop through all properties on window to find the Connect API
-                    console.log('Searching all window properties for Connect API...');
-                    
-                    for (const key of Object.keys(window)) {
-                        const obj = window[key];
-                        if (obj && typeof obj === 'object' && typeof obj.openConnect === 'function') {
-                            console.log(`Found Connect API in window.${key}`);
-                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
-                            setupEventListeners();
-                            return;
-                        }
-                    }
-                    
-                    console.error('window.stacksConnect or openConnect not available:', window.stacksConnect);
-                    console.error('window.Connect:', window.Connect);
-                    showMessage("Failed to initialize wallet connection. Please try a different browser or check your internet connection.", "error");
-                }
-            } catch (error) {
-                console.error('Error initializing application:', error);
-                showMessage("An error occurred while initializing the application", "error");
-            }
-        }
-        
-        // Set up all event listeners
-        function setupEventListeners() {
-            // Connect wallet event listener
-            connectBtn.addEventListener('click', async () => {
-                // Double-check that openConnect is available
-                if (!openConnect) {
-                    showMessage("Wallet connection unavailable - please try refreshing the page", "error");
-                    console.error("openConnect is undefined");
-                    return;
-                }
-                
-                showMessage('Connecting to Hiro Wallet...', 'processing');
-                try {
-                    console.log('Attempting to connect to wallet...');
-                    await openConnect(connectOptions);
-                } catch (error) {
-                    console.error('Connection error:', error);
-                    showMessage(`Connection error: ${error.message}`, 'error');
-                }
-            });
-
-        // Post new task
-        postTaskForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const description = document.getElementById('task-description').value;
-            const reward = parseInt(document.getElementById('task-reward').value);
-            
-            if (!description || isNaN(reward) || reward < 1000000) {
-                showMessage('Please provide a valid description and reward amount (min 1 STX).', 'error');
-                return;
-            }
-            
-            // Disable form during transaction
-            const submitBtn = postTaskForm.querySelector('button');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Processing...';
-            showMessage('Creating transaction...', 'processing', 0);
-            
-            // Double-check that openContractCall is available
-            if (!openContractCall) {
-                showMessage("Contract interaction unavailable - please try refreshing the page", "error");
-                console.error("openContractCall is undefined");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Post Task';
-                return;
-            }
-            
-            try {
-                await openContractCall({
-                    ...appConfig,
-                    contractAddress: contractAddress,
-                    contractName: contractName,
-                    functionName: 'post-task',
-                    functionArgs: [
-                        encodeUtf8(description),
-                        encodeUint(reward)
-                    ],
-                    network: appConfig.network,
-                    onFinish: async (data) => {
-                        console.log('Transaction:', data);
-                        
-                        // Clear form
-                        document.getElementById('task-description').value = '';
-                        document.getElementById('task-reward').value = '';
-                        
-                        // Update UI with transaction info
-                        const txId = data.txId;
-                        const txLink = `https://explorer.stacks.co/txid/${txId}?chain=testnet`;
-                        
-                        showMessage(`
-                            Task posted successfully! 
-                            <a href="${txLink}" target="_blank" class="transaction-link">View Transaction</a>
-                        `, 'success');
-                        
-                        // Re-fetch tasks after a short delay
-                        setTimeout(() => {
-                            fetchAllTasks();
-                        }, 3000);
-                        
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = 'Post Task';
-                    },
-                    onCancel: () => {
-                        showMessage('Transaction cancelled', 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = 'Post Task';
-                    }
-                });
-            } catch (error) {
-                console.error('Transaction error:', error);
-                showMessage(`Transaction error: ${error.message}`, 'error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Post Task';
-            }
-        });
-
         // Claim a task
         async function claimTask(taskId) {
             if (!userAddress) {
@@ -959,7 +821,7 @@
                 showMessage(`Transaction error: ${error.message}`, 'error');
             }
         }
-
+        
         // Fetch all tasks from the contract
         async function fetchAllTasks() {
             if (!userAddress) return;
@@ -1030,7 +892,7 @@
             }
         }
         
-        // Render tasks in UI
+        // Render tasks in UI and attach event listeners
         function renderTasks() {
             if (allTasks.length === 0) {
                 noTasksEl.classList.remove('hidden');
@@ -1090,49 +952,8 @@
                 taskListEl.appendChild(taskEl);
             });
             
-            // Rebind event handlers to buttons
+            // Rebind event handlers to buttons 
             rebindTaskButtons();
-        }
-
-        // Shorten an address for display
-        function shortenAddress(address) {
-            return address.substring(0, 5) + '...' + address.substring(address.length - 4);
-        }
-
-        // Update UI based on wallet connection
-        function updateUI() {
-            if (userAddress) {
-                connectBtn.classList.add('hidden');
-                walletInfo.classList.remove('hidden');
-                
-                // Create initials for avatar
-                const initials = userAddress.substring(2, 4).toUpperCase();
-                
-                walletInfo.innerHTML = `
-                    <div class="address-badge">
-                        <div class="profile-avatar">${initials}</div>
-                        ${shortenAddress(userAddress)}
-                    </div>
-                `;
-                
-                postTaskSection.classList.remove('hidden');
-            } else {
-                connectBtn.classList.remove('hidden');
-                walletInfo.classList.add('hidden');
-                postTaskSection.classList.add('hidden');
-            }
-        }
-        
-        // Set up refresh button
-        refreshBtn.addEventListener('click', () => {
-            if (userAddress) {
-                fetchAllTasks();
-            } else {
-                showMessage('Please connect your wallet first', 'error');
-            }
-        });
-        
-        // End of setupEventListeners
         }
         
         // Ensure task buttons use proper event handlers
@@ -1144,6 +965,181 @@
               button.addEventListener('click', () => approveTask(button.getAttribute('data-id')));
             }
           });
+        }
+        
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Connect wallet event listener
+            connectBtn.addEventListener('click', async () => {
+                // Double-check that openConnect is available
+                if (!openConnect) {
+                    showMessage("Wallet connection unavailable - please try refreshing the page", "error");
+                    console.error("openConnect is undefined");
+                    return;
+                }
+                
+                showMessage('Connecting to Hiro Wallet...', 'processing');
+                try {
+                    console.log('Attempting to connect to wallet...');
+                    await openConnect(connectOptions);
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    showMessage(`Connection error: ${error.message}`, 'error');
+                }
+            });
+
+            // Post new task
+            postTaskForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const description = document.getElementById('task-description').value;
+                const reward = parseInt(document.getElementById('task-reward').value);
+                
+                if (!description || isNaN(reward) || reward < 1000000) {
+                    showMessage('Please provide a valid description and reward amount (min 1 STX).', 'error');
+                    return;
+                }
+                
+                // Disable form during transaction
+                const submitBtn = postTaskForm.querySelector('button');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = 'Processing...';
+                showMessage('Creating transaction...', 'processing', 0);
+                
+                // Double-check that openContractCall is available
+                if (!openContractCall) {
+                    showMessage("Contract interaction unavailable - please try refreshing the page", "error");
+                    console.error("openContractCall is undefined");
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Post Task';
+                    return;
+                }
+                
+                try {
+                    await openContractCall({
+                        ...appConfig,
+                        contractAddress: contractAddress,
+                        contractName: contractName,
+                        functionName: 'post-task',
+                        functionArgs: [
+                            encodeUtf8(description),
+                            encodeUint(reward)
+                        ],
+                        network: appConfig.network,
+                        onFinish: async (data) => {
+                            console.log('Transaction:', data);
+                            
+                            // Clear form
+                            document.getElementById('task-description').value = '';
+                            document.getElementById('task-reward').value = '';
+                            
+                            // Update UI with transaction info
+                            const txId = data.txId;
+                            const txLink = `https://explorer.stacks.co/txid/${txId}?chain=testnet`;
+                            
+                            showMessage(`
+                                Task posted successfully! 
+                                <a href="${txLink}" target="_blank" class="transaction-link">View Transaction</a>
+                            `, 'success');
+                            
+                            // Re-fetch tasks after a short delay
+                            setTimeout(() => {
+                                fetchAllTasks();
+                            }, 3000);
+                            
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = 'Post Task';
+                        },
+                        onCancel: () => {
+                            showMessage('Transaction cancelled', 'error');
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = 'Post Task';
+                        }
+                    });
+                } catch (error) {
+                    console.error('Transaction error:', error);
+                    showMessage(`Transaction error: ${error.message}`, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Post Task';
+                }
+            });
+            
+            // Set up refresh button
+            refreshBtn.addEventListener('click', () => {
+                if (userAddress) {
+                    fetchAllTasks();
+                } else {
+                    showMessage('Please connect your wallet first', 'error');
+                }
+            });
+        }
+        
+        // Initialize application after script is loaded
+        async function initializeApp() {
+            try {
+                console.log('Initializing Stacks Connect from window.stacksConnect');
+                
+                // Dump complete debug info to console
+                console.log('DETAILED DEBUG INFO:');
+                console.log('Window object has stacksConnect:', typeof window.stacksConnect);
+                console.log('Window object has Connect:', typeof window.Connect);
+                if (window.stacksConnect) {
+                    console.log('stacksConnect keys:', Object.keys(window.stacksConnect));
+                    console.log('stacksConnect openConnect type:', typeof window.stacksConnect.openConnect);
+                }
+                if (window.Connect) {
+                    console.log('Connect keys:', Object.keys(window.Connect));
+                    console.log('Connect openConnect type:', typeof window.Connect.openConnect);
+                }
+                
+                // Debug info - log what's available on window
+                console.log('Available objects on window:', Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('connect') || 
+                    k.toLowerCase().includes('stacks')));
+                
+                // Always make sure global functions are defined for HTML
+                window.claimTask = claimTask;
+                window.approveTask = approveTask;
+                
+                if (window.stacksConnect && typeof window.stacksConnect.openConnect === 'function') {
+                    console.log('Successfully found openConnect in window.stacksConnect');
+                    
+                    // Get the functions from window.stacksConnect
+                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.stacksConnect);
+                    
+                    // Set up event listeners once we have the functions
+                    setupEventListeners();
+                } else if (window.Connect && typeof window.Connect.openConnect === 'function') {
+                    // Try alternate location (sometimes it loads as window.Connect)
+                    console.log('Found openConnect in window.Connect instead');
+                    
+                    // Get the functions from window.Connect
+                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.Connect);
+                    
+                    // Set up event listeners once we have the functions
+                    setupEventListeners();
+                } else {
+                    // Last resort: loop through all properties on window to find the Connect API
+                    console.log('Searching all window properties for Connect API...');
+                    
+                    for (const key of Object.keys(window)) {
+                        const obj = window[key];
+                        if (obj && typeof obj === 'object' && typeof obj.openConnect === 'function') {
+                            console.log(`Found Connect API in window.${key}`);
+                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
+                            setupEventListeners();
+                            return;
+                        }
+                    }
+                    
+                    console.error('window.stacksConnect or openConnect not available:', window.stacksConnect);
+                    console.error('window.Connect:', window.Connect);
+                    showMessage("Failed to initialize wallet connection. Please try a different browser or check your internet connection.", "error");
+                }
+            } catch (error) {
+                console.error('Error initializing application:', error);
+                showMessage("An error occurred while initializing the application", "error");
+            }
         }
         
         // Wait for DOM to load, then initialize the app directly with our custom shim
