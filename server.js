@@ -40,8 +40,29 @@ app.use(cors());
 // Determine the correct directory to serve static files from
 const staticDir = path.join(__dirname, process.env.VERCEL ? 'public' : '');
 
+// Log the static directory for debugging
+console.log(`Serving static files from: ${staticDir}`);
+
 // Serve static files from the determined directory
 app.use(express.static(staticDir));
+
+// Specific route for the stacks-connect.js file to ensure it's found
+app.get('/stacks-connect.js', (req, res) => {
+  console.log('Direct request for stacks-connect.js');
+  res.sendFile(path.join(staticDir, 'stacks-connect.js'));
+});
+
+// Serve our custom shim
+app.get('/stacks-connect-shim.js', (req, res) => {
+  console.log('Direct request for stacks-connect-shim.js');
+  res.sendFile(path.join(staticDir, 'stacks-connect-shim.js'));
+});
+
+// Serve manifest.json
+app.get('/manifest.json', (req, res) => {
+  console.log('Direct request for manifest.json');
+  res.sendFile(path.join(staticDir, 'manifest.json'));
+});
 
 // All other GET requests not handled before will return the index.html
 app.get('*', (req, res) => {

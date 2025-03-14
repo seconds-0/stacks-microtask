@@ -562,6 +562,12 @@
         </div>
     </div>
 
+    <!-- Use our custom shim first (guaranteed to work) -->
+    <script src="/stacks-connect-shim.js"></script>
+    
+    <!-- Then try the real stacks-connect library (might work on some deployments) -->
+    <script src="/stacks-connect.js" onerror="console.error('Static script tag failed to load')"></script>
+    
     <script>
         // Contract configuration
         const contractAddress = 'ST29ZH6JAYVPQT1BRRFZ3K0EJCT0W50Q5E309N45A';
@@ -681,6 +687,19 @@
         async function initializeApp() {
             try {
                 console.log('Initializing Stacks Connect from window.stacksConnect');
+                
+                // Dump complete debug info to console
+                console.log('DETAILED DEBUG INFO:');
+                console.log('Window object has stacksConnect:', typeof window.stacksConnect);
+                console.log('Window object has Connect:', typeof window.Connect);
+                if (window.stacksConnect) {
+                    console.log('stacksConnect keys:', Object.keys(window.stacksConnect));
+                    console.log('stacksConnect openConnect type:', typeof window.stacksConnect.openConnect);
+                }
+                if (window.Connect) {
+                    console.log('Connect keys:', Object.keys(window.Connect));
+                    console.log('Connect openConnect type:', typeof window.Connect.openConnect);
+                }
                 
                 // Debug info - log what's available on window
                 console.log('Available objects on window:', Object.keys(window).filter(k => 
@@ -1122,13 +1141,27 @@
                 
                 try {
                     console.log(`Attempting to load script from: ${url}`);
+                    console.log(`Loading script from URL: ${url}`);
                     await loadScript(url);
+                    console.log(`Script from ${url} loaded successfully`); // Add extra logging
                     scriptLoaded = true;
                     
                     console.log(`Successfully loaded script from: ${url}`);
                     
+                    // Debug - inspect the window object for stacks-related properties
+                    console.log('After loading, available Connect APIs:', {
+                        'window.stacksConnect': window.stacksConnect,
+                        'window.Connect': window.Connect,
+                        'window.stacks': window.stacks
+                    });
+                    
+                    console.log('All window keys:', Object.keys(window).filter(k => 
+                        k.toLowerCase().includes('connect') || 
+                        k.toLowerCase().includes('stacks')));
+                    
                     // Wait a moment for the script to initialize
                     setTimeout(() => {
+                        console.log('Initializing app after script load');
                         initializeApp();
                     }, 200);
                 } catch (error) {
@@ -1139,8 +1172,21 @@
             
             // If all script loading attempts failed
             if (!scriptLoaded) {
-                console.error('All script loading attempts failed');
-                showMessage("Failed to load wallet connection library. Please check your internet connection and try again.", "error");
+                console.error('All dynamic script loading attempts failed, trying fallback method');
+                
+                // Try one last approach - add a regular script tag
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = '/stacks-connect.js';
+                fallbackScript.onload = () => {
+                    console.log('Fallback script loaded successfully');
+                    console.log('Trying direct initializeApp() call');
+                    initializeApp();
+                };
+                fallbackScript.onerror = (err) => {
+                    console.error('Even fallback script failed to load:', err);
+                    showMessage("Failed to load wallet connection library. Please check your internet connection and try again.", "error");
+                };
+                document.head.appendChild(fallbackScript);
             }
         });
     </script>
