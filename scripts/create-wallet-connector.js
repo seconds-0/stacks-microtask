@@ -86,14 +86,14 @@ const walletConnectorCode = `// Stacks Wallet Connect - Direct Hiro Wallet Integ
       // Get the current URL as the redirect URL
       const redirectUrl = window.location.origin + window.location.pathname;
       
-      // Format for Leather Wallet (following correct docs at https://leather.gitbook.io/developers)
+      // Format for Leather Wallet (following correct docs)
       const appParamsBase64 = btoa(JSON.stringify({
         appDetails: appDetails,
         redirect: redirectUrl
       }));
       
-      // Use the correct URL format according to official Leather docs
-      const authUrl = \`https://app.leather.xyz/authentication?authRequest=\${appParamsBase64}\`;
+      // Use the correct URL for Leather Wallet
+      const authUrl = \`https://app.leather.io/authentication?authRequest=\${appParamsBase64}\`;
       
       console.log("Redirecting to Leather Wallet:", authUrl);
       
@@ -136,7 +136,7 @@ const walletConnectorCode = `// Stacks Wallet Connect - Direct Hiro Wallet Integ
       const txParamsBase64 = btoa(JSON.stringify(txParams));
       
       // Format the wallet URL (using correct Leather Wallet contract call format)
-      const txUrl = \`https://app.leather.xyz/transaction?contractCall=\${txParamsBase64}\`;
+      const txUrl = \`https://app.leather.io/transaction?contractCall=\${txParamsBase64}\`;
       
       // Open the wallet in a new window
       console.log("Opening Leather Wallet for contract call:", txUrl);
