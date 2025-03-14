@@ -10,7 +10,7 @@
     "serve": "python3 -m http.server 8080 || python -m http.server 8080",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "mkdir -p public && cp -r index.html icon.png public/ && node scripts/create-wallet-connector.js",
+    "build": "rm -rf public/* && mkdir -p public && cp -r index.html icon.png public/ && node scripts/create-wallet-connector.js",
     "vercel-build": "npm run build",
     "deploy:prepare": "npm install"
   },

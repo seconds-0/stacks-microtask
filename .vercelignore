@@ -1,0 +1,6 @@
+# Ignore everything except what we need
+*
+!public/**
+!package.json
+!vercel.json
+!server.js
