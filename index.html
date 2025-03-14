@@ -563,7 +563,16 @@
     </div>
 
     <!-- Import the Stacks Connect library -->
-    <script src="https://unpkg.com/@stacks/connect@7.5.0/dist/umd/index.umd.js"></script>
+    <script src="https://unpkg.com/@stacks/connect"></script>
+    <!-- Fallback to specific version if needed -->
+    <script>
+        if (typeof window.Connect === 'undefined' && typeof window.StacksConnect === 'undefined') {
+            console.log("Loading fallback Stacks Connect library");
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/@stacks/connect@7.5.0/dist/umd/index.umd.js";
+            document.head.appendChild(script);
+        }
+    </script>
     
     <script>
         // Contract configuration
@@ -576,7 +585,6 @@
         let userSession = null;
         let allTasks = [];
         let statusTimeout = null;
-        let stacksConnect = null;
         
         // DOM elements
         const connectBtn = document.getElementById('connect-wallet');
@@ -640,16 +648,38 @@
             }
         };
         
-        // Initialize Stacks Connect
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                stacksConnect = window.StacksConnect;
-                if (!stacksConnect) {
-                    console.error("StacksConnect not found on window object");
-                    showMessage("Error loading Stacks Connect library. Please refresh the page.", "error");
+        // Import the required functions directly from the Connect library
+        // Use this at the global scope
+        let { openConnect, openContractCall, encodeUtf8, encodeUint } = {};
+        
+        // Initialize the library
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for Connect object on window
+            if (typeof window.Connect !== 'undefined') {
+                ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.Connect);
+                console.log("Found Connect object on window");
+            }
+            // Also try to check for any other global objects that might contain the Connect API
+            else {
+                console.log("Available Connect-related globals:", Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('connect') || 
+                    k.toLowerCase().includes('stacks')));
+                
+                // Inspect window object for possible matches
+                for (const key of Object.keys(window)) {
+                    const obj = window[key];
+                    if (obj && typeof obj === 'object') {
+                        if (typeof obj.openConnect === 'function') {
+                            console.log(`Found Connect API in window.${key}`);
+                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
+                            break;
+                        }
+                    }
                 }
-            } catch (e) {
-                console.error("Error initializing Stacks Connect:", e);
+            }
+            
+            if (!openConnect) {
+                console.error("Could not find Connect API on window object");
                 showMessage("Error loading Stacks Connect library. Please refresh the page.", "error");
             }
         });
@@ -675,15 +705,28 @@
         connectBtn.addEventListener('click', async () => {
             showMessage('Connecting to Hiro Wallet...', 'processing');
             try {
-                if (!stacksConnect) {
-                    stacksConnect = window.StacksConnect;
+                // Debug info
+                console.log("Available global objects:", Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('connect') || 
+                    k.toLowerCase().includes('stacks')));
+                
+                if (!openConnect) {
+                    // One last attempt to find the Connect API
+                    for (const key of Object.keys(window)) {
+                        const obj = window[key];
+                        if (obj && typeof obj === 'object' && typeof obj.openConnect === 'function') {
+                            console.log(`Found Connect API in window.${key} at click time`);
+                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
+                            break;
+                        }
+                    }
                 }
                 
-                if (!stacksConnect) {
+                if (!openConnect) {
                     throw new Error('Stacks Connect not initialized. Try refreshing the page.');
                 }
                 
-                await stacksConnect.openConnect(connectOptions);
+                await openConnect(connectOptions);
             } catch (error) {
                 console.error('Connection error:', error);
                 showMessage(`Connection error: ${error.message}`, 'error');
@@ -709,14 +752,14 @@
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await stacksConnect.openContractCall({
+                await openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
                     functionName: 'post-task',
                     functionArgs: [
-                        stacksConnect.encodeUtf8(description),
-                        stacksConnect.encodeUint(reward)
+                        encodeUtf8(description),
+                        encodeUint(reward)
                     ],
                     network: appConfig.network,
                     onFinish: async (data) => {
@@ -767,13 +810,13 @@
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await stacksConnect.openContractCall({
+                await openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
                     functionName: 'claim-task',
                     functionArgs: [
-                        stacksConnect.encodeUint(taskId)
+                        encodeUint(taskId)
                     ],
                     network: appConfig.network,
                     onFinish: async (data) => {
@@ -811,13 +854,13 @@
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await stacksConnect.openContractCall({
+                await openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
                     functionName: 'approve-task',
                     functionArgs: [
-                        stacksConnect.encodeUint(taskId)
+                        encodeUint(taskId)
                     ],
                     network: appConfig.network,
                     onFinish: async (data) => {
@@ -861,7 +904,7 @@
                     try {
                         const response = await fetch(`https://api.testnet.hiro.so/v2/contracts/call-read/${contractAddress}/${contractName}/get-task?${new URLSearchParams({
                             senderAddress: userAddress,
-                            arguments: [stacksConnect ? stacksConnect.encodeUint(taskId) : JSON.stringify({type: "uint", value: taskId.toString()})]
+                            arguments: [encodeUint ? encodeUint(taskId) : JSON.stringify({type: "uint", value: taskId.toString()})]
                         })}`);
                         
                         const data = await response.json();
