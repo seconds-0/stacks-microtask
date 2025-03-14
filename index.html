@@ -562,9 +562,6 @@
         </div>
     </div>
 
-    <!-- Import the Stacks Connect library - use specific version for stability -->
-    <script src="https://cdn.jsdelivr.net/npm/@stacks/connect@7.5.0/dist/umd/index.umd.js"></script>
-    
     <script>
         // Contract configuration
         const contractAddress = 'ST29ZH6JAYVPQT1BRRFZ3K0EJCT0W50Q5E309N45A';
@@ -577,6 +574,12 @@
         let allTasks = [];
         let statusTimeout = null;
         
+        // Stacks Connect functions - will be populated once script loads
+        let openConnect;
+        let openContractCall;
+        let encodeUtf8;
+        let encodeUint;
+        
         // DOM elements
         const connectBtn = document.getElementById('connect-wallet');
         const walletInfo = document.getElementById('wallet-info');
@@ -587,6 +590,24 @@
         const statusContainer = document.getElementById('status-container');
         const refreshBtn = document.getElementById('refresh-btn');
         const networkBadge = document.getElementById('network-badge');
+        
+        // Helper function to load scripts dynamically
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                console.log(`Loading script: ${src}...`);
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    console.log(`Script loaded successfully: ${src}`);
+                    resolve();
+                };
+                script.onerror = (err) => {
+                    console.error(`Failed to load script: ${src}`, err);
+                    reject(new Error(`Failed to load script: ${src}`));
+                };
+                document.head.appendChild(script);
+            });
+        }
         
         // Helper functions
         function showMessage(message, type = 'success', duration = 5000) {
@@ -639,9 +660,6 @@
             }
         };
         
-        // Get Connect functions directly from window.stacksConnect
-        const { openConnect, openContractCall, encodeUtf8, encodeUint } = window.stacksConnect || {};
-        
         // Connect wallet options
         const connectOptions = {
             ...appConfig,
@@ -659,15 +677,59 @@
             userSession: userSession,
         };
         
-        // Wait for DOM to be ready before setting up event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check if Stacks Connect was loaded properly
-            if (!openConnect) {
-                showMessage("Stacks Connect library not loaded - please refresh the page", "error");
-                console.error("Stacks Connect not available - window.stacksConnect:", window.stacksConnect);
-                return;
+        // Initialize application after script is loaded
+        async function initializeApp() {
+            try {
+                console.log('Initializing Stacks Connect from window.stacksConnect');
+                
+                // Debug info - log what's available on window
+                console.log('Available objects on window:', Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('connect') || 
+                    k.toLowerCase().includes('stacks')));
+                
+                if (window.stacksConnect && typeof window.stacksConnect.openConnect === 'function') {
+                    console.log('Successfully found openConnect in window.stacksConnect');
+                    
+                    // Get the functions from window.stacksConnect
+                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.stacksConnect);
+                    
+                    // Set up event listeners once we have the functions
+                    setupEventListeners();
+                } else if (window.Connect && typeof window.Connect.openConnect === 'function') {
+                    // Try alternate location (sometimes it loads as window.Connect)
+                    console.log('Found openConnect in window.Connect instead');
+                    
+                    // Get the functions from window.Connect
+                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.Connect);
+                    
+                    // Set up event listeners once we have the functions
+                    setupEventListeners();
+                } else {
+                    // Last resort: loop through all properties on window to find the Connect API
+                    console.log('Searching all window properties for Connect API...');
+                    
+                    for (const key of Object.keys(window)) {
+                        const obj = window[key];
+                        if (obj && typeof obj === 'object' && typeof obj.openConnect === 'function') {
+                            console.log(`Found Connect API in window.${key}`);
+                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
+                            setupEventListeners();
+                            return;
+                        }
+                    }
+                    
+                    console.error('window.stacksConnect or openConnect not available:', window.stacksConnect);
+                    console.error('window.Connect:', window.Connect);
+                    showMessage("Failed to initialize wallet connection. Please try a different browser or check your internet connection.", "error");
+                }
+            } catch (error) {
+                console.error('Error initializing application:', error);
+                showMessage("An error occurred while initializing the application", "error");
             }
-            
+        }
+        
+        // Set up all event listeners
+        function setupEventListeners() {
             // Connect wallet event listener
             connectBtn.addEventListener('click', async () => {
                 // Double-check that openConnect is available
@@ -679,6 +741,7 @@
                 
                 showMessage('Connecting to Hiro Wallet...', 'processing');
                 try {
+                    console.log('Attempting to connect to wallet...');
                     await openConnect(connectOptions);
                 } catch (error) {
                     console.error('Connection error:', error);
@@ -1033,12 +1096,53 @@
             }
         });
         
-        // End of DOMContentLoaded
-        });
+        // End of setupEventListeners
+        }
         
         // Expose functions to be called from HTML
         window.claimTask = claimTask;
         window.approveTask = approveTask;
+        
+        // Wait for DOM to load, then load the Stacks Connect script and initialize the app
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('DOM loaded, preparing to load Stacks Connect script');
+            
+            // Try all CDN options and a local file fallback
+            const scriptUrls = [
+                'https://cdn.jsdelivr.net/npm/@stacks/connect@7.5.0/dist/umd/index.umd.js',
+                'https://unpkg.com/@stacks/connect@7.5.0/dist/umd/index.umd.js',
+                '/stacks-connect.js' // Local fallback
+            ];
+            
+            // Try each source until one succeeds
+            let scriptLoaded = false;
+            
+            for (const url of scriptUrls) {
+                if (scriptLoaded) break;
+                
+                try {
+                    console.log(`Attempting to load script from: ${url}`);
+                    await loadScript(url);
+                    scriptLoaded = true;
+                    
+                    console.log(`Successfully loaded script from: ${url}`);
+                    
+                    // Wait a moment for the script to initialize
+                    setTimeout(() => {
+                        initializeApp();
+                    }, 200);
+                } catch (error) {
+                    console.error(`Failed to load script from: ${url}`, error);
+                    // Continue to next URL
+                }
+            }
+            
+            // If all script loading attempts failed
+            if (!scriptLoaded) {
+                console.error('All script loading attempts failed');
+                showMessage("Failed to load wallet connection library. Please check your internet connection and try again.", "error");
+            }
+        });
     </script>
 </body>
 </html>

@@ -325,3 +325,147 @@ If the issue persists after these fixes, run npm install to ensure all dependenc
 Your contract (ST29ZH6JAYVPQT1BRRFZ3K0EJCT0W50Q5E309N45A.microtasks-minimal) deployed successfully, so this is purely a frontend issue.
 
 For production, consider hosting the script locally (Fix #4) to avoid CDN reliance
+
+--------------- PART 2
+
+Solution: Promise-Based Dynamic Script Loading with Logging
+To ensure the @stacks/connect script loads correctly on Vercel, we’ll use a promise-based approach to load it dynamically, combined with detailed logging to pinpoint any issues. This method guarantees the script is fully loaded before your "Connect Wallet" button is set up.
+Implementation Steps
+Remove Existing <script> Tags: If your HTML currently includes a <script> tag for @stacks/connect, remove it to avoid conflicts with dynamic loading.
+
+Add This Code: Place the following JavaScript in a <script> tag at the bottom of your index.html or in a separate .js file loaded after the DOM:
+
+javascript
+
+// Helper function to load the script dynamically
+function loadScript(src) {
+return new Promise((resolve, reject) => {
+const script = document.createElement('script');
+script.src = src;
+script.onload = resolve;
+script.onerror = reject;
+document.head.appendChild(script);
+});
+}
+
+// Wait for DOM to load
+document.addEventListener('DOMContentLoaded', async () => {
+console.log('DOM loaded');
+try {
+console.log('Loading Stacks Connect script...');
+await loadScript('https://cdn.jsdelivr.net/npm/@stacks/connect@7.5.0/dist/umd/index.umd.js');
+console.log('Script loaded successfully');
+
+    if (window.stacksConnect && window.stacksConnect.openConnect) {
+      console.log('openConnect is available');
+      const { openConnect } = window.stacksConnect;
+      setupConnectButton(openConnect);
+    } else {
+      console.error('openConnect is not available in window.stacksConnect');
+      alert('Failed to initialize wallet connection. Please try refreshing the page.');
+    }
+
+} catch (error) {
+console.error('Failed to load Stacks Connect script:', error);
+alert('Error loading wallet library. Check your internet connection and try again.');
+}
+});
+
+// Function to set up the connect button
+function setupConnectButton(openConnect) {
+const connectBtn = document.getElementById('connect-wallet'); // Replace with your button’s ID
+connectBtn.addEventListener('click', async () => {
+try {
+console.log('Attempting to connect to Hiro Wallet...');
+await openConnect({
+appDetails: {
+name: 'Your App Name',
+icon: window.location.origin + '/icon.png',
+},
+onFinish: () => {
+console.log('Wallet connected successfully!');
+},
+onCancel: () => {
+console.log('User canceled wallet connection.');
+},
+});
+} catch (error) {
+console.error('Connection error:', error);
+alert(`Connection failed: ${error.message}`);
+}
+});
+}
+
+How It Works
+Dynamic Loading: The loadScript function creates a <script> tag programmatically and returns a promise that resolves when the script loads or rejects if it fails.
+
+Sequential Execution: The DOMContentLoaded event ensures the DOM is ready, and await loadScript(...) waits for the script before proceeding.
+
+Validation: It checks if window.stacksConnect.openConnect exists before setting up the button, avoiding undefined errors.
+
+Logging: Console messages track each step, making it easy to debug.
+
+Error Handling: Alerts notify the user of failures, while errors are logged for your review.
+
+Debugging on Vercel
+Deploy the Update: Push this code to your Vercel project.
+
+Test in Browser: Open your deployed app and press F12 to access the developer console (Console tab).
+
+Check Logs:
+"Script loaded successfully" followed by "openConnect is not available": The script loaded, but the API might have changed—see the alternative solution below.
+
+No "Script loaded successfully": The script failed to load. Switch to the Network tab to check for errors (e.g., 404, timeout).
+
+Alternative: Host the Script Locally on Vercel
+If the CDN approach fails (e.g., due to network issues or Vercel-specific quirks), hosting the script locally ensures reliability.
+Steps
+Download the Script: Get the UMD build of @stacks/connect@7.5.0 from here.
+
+Add to Project: Save it as stacks-connect.js in your public folder (e.g., public/stacks-connect.js).
+
+Update the Code: Change the loadScript call to:
+javascript
+
+await loadScript('/stacks-connect.js');
+
+Redeploy: Push to Vercel and test again.
+
+Benefits
+Same-Origin Loading: Served from your Vercel domain, avoiding CDN-related delays or restrictions.
+
+Consistency: No dependency on external servers.
+
+Vercel-Specific Considerations
+Content Security Policy (CSP):
+Check the browser console for CSP errors. If present, add a vercel.json file with:
+json
+
+{
+"headers": [
+{
+"source": "/(.\*)",
+"headers": [
+{
+"key": "Content-Security-Policy",
+"value": "script-src 'self' https://cdn.jsdelivr.net;"
+}
+]
+}
+]
+}
+
+Adjust the script-src value based on your needs (e.g., 'self' for local hosting).
+
+Caching: Vercel caches static assets, but this shouldn’t affect external scripts unless misconfigured. For local hosting, ensure the file updates with each deployment.
+
+Framework Usage: If you’re using a framework (e.g., Next.js), let me know—I can adapt the solution to integrate @stacks/connect as a module instead.
+
+Next Steps
+Try the Dynamic Loading Solution: Implement it and check the console logs on your Vercel deployment.
+
+If openConnect Is Missing: Verify the library version or consult the Stacks.js docs.
+
+If Loading Fails: Switch to hosting the script locally.
+
+Still Stuck?: Share your console logs or network errors, and I’ll refine the plan.
