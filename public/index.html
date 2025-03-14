@@ -718,6 +718,10 @@
                     k.toLowerCase().includes('connect') || 
                     k.toLowerCase().includes('stacks')));
                 
+                // Always make sure global functions are defined for HTML
+                window.claimTask = claimTask;
+                window.approveTask = approveTask;
+                
                 if (window.stacksConnect && typeof window.stacksConnect.openConnect === 'function') {
                     console.log('Successfully found openConnect in window.stacksConnect');
                     
@@ -863,6 +867,13 @@
                 return;
             }
             
+            // Add defensive programming to prevent errors
+            if (typeof window.stacksConnect === 'undefined' || typeof window.stacksConnect.openContractCall !== 'function') {
+                showMessage("Wallet connection not ready - please try again in a moment", "error");
+                console.error("stacksConnect or openContractCall is not available");
+                return;
+            }
+            
             // Double-check that openContractCall is available
             if (!openContractCall) {
                 showMessage("Contract interaction unavailable - please try refreshing the page", "error");
@@ -911,6 +922,13 @@
         async function approveTask(taskId) {
             if (!userAddress) {
                 showMessage('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            // Add defensive programming to prevent errors
+            if (typeof window.stacksConnect === 'undefined' || typeof window.stacksConnect.openContractCall !== 'function') {
+                showMessage("Wallet connection not ready - please try again in a moment", "error");
+                console.error("stacksConnect or openContractCall is not available");
                 return;
             }
             
@@ -1057,9 +1075,9 @@
                 
                 let actionBtn = '';
                 if (!isUserTask && task.status === 'open') {
-                    actionBtn = `<button onclick="claimTask(${task.id})" class="btn btn-primary">Claim Task</button>`;
+                    actionBtn = `<button data-action="claim" data-id="${task.id}" class="btn btn-primary">Claim Task</button>`;
                 } else if (isUserTask && task.status === 'claimed') {
-                    actionBtn = `<button onclick="approveTask(${task.id})" class="btn btn-success">Approve & Pay</button>`;
+                    actionBtn = `<button data-action="approve" data-id="${task.id}" class="btn btn-success">Approve & Pay</button>`;
                 }
                 
                 taskEl.innerHTML = `
@@ -1087,6 +1105,9 @@
                 
                 taskListEl.appendChild(taskEl);
             });
+            
+            // Rebind event handlers to buttons
+            rebindTaskButtons();
         }
 
         // Shorten an address for display
@@ -1130,9 +1151,16 @@
         // End of setupEventListeners
         }
         
-        // Expose functions to be called from HTML
-        window.claimTask = claimTask;
-        window.approveTask = approveTask;
+        // Ensure task buttons use proper event handlers
+        function rebindTaskButtons() {
+          document.querySelectorAll('.task-buttons button').forEach(button => {
+            if (button.getAttribute('data-action') === 'claim') {
+              button.addEventListener('click', () => claimTask(button.getAttribute('data-id')));
+            } else if (button.getAttribute('data-action') === 'approve') {
+              button.addEventListener('click', () => approveTask(button.getAttribute('data-id')));
+            }
+          });
+        }
         
         // Wait for DOM to load, then load the Stacks Connect script and initialize the app
         document.addEventListener('DOMContentLoaded', async () => {
