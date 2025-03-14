@@ -37,7 +37,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.5;
             color: var(--dark);
-            background-color: lime; /* EMERGENCY LIME GREEN BACKGROUND - V6 */
+            background-color: var(--bg-primary); /* Elegant Dark Theme */
             background-image: 
                 radial-gradient(at 10% 10%, rgba(128, 85, 255, 0.1) 0px, transparent 50%),
                 radial-gradient(at 90% 90%, rgba(255, 64, 129, 0.1) 0px, transparent 50%);
@@ -520,8 +520,8 @@
                 <div>
                     <h1>Stacks Micro-Task Board <span class="network-badge" id="network-badge">TESTNET</span></h1>
                     <p>Post tasks, earn STX, and build your reputation on the Stacks blockchain.</p>
-                    <div style="margin-top: 10px; padding: 8px 12px; background: black; color: white; border-radius: 8px; display: inline-block; font-weight: 500; font-size: 20px;">
-                        🚨🚨 COMPLETE RESET - V6 LIME GREEN - Loaded: <span id="timestamp"></span> 🚨🚨
+                    <div style="margin-top: 10px; padding: 8px 12px; background: var(--secondary); color: white; border-radius: 8px; display: inline-block; font-weight: 500;">
+                        🌙 Dark Mode - Build: <span id="timestamp"></span>
                     </div>
                     <script>
                         document.getElementById('timestamp').textContent = new Date().toLocaleString();
@@ -577,11 +577,8 @@
         </div>
     </div>
 
-    <!-- Use our custom shim first (guaranteed to work) -->
+    <!-- Use our custom wallet connect implementation -->
     <script src="/stacks-connect-shim.js"></script>
-    
-    <!-- Then try the real stacks-connect library (might work on some deployments) -->
-    <script src="/stacks-connect.js" onerror="console.error('Static script tag failed to load')"></script>
     
     <script>
         // Contract configuration
