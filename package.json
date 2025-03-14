@@ -10,9 +10,9 @@
     "serve": "python3 -m http.server 8080 || python -m http.server 8080",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "mkdir -p public && cp -r index.html icon.png public/ && cp public/stacks-connect-shim.js public/ && node -e \"require('fs').writeFileSync('public/timestamp.txt', new Date().toString()); console.log('Build completed at: ' + new Date())\"",
+    "build": "mkdir -p public && cp -r index.html icon.png public/ && node scripts/create-wallet-connector.js",
     "vercel-build": "npm run build",
-    "deploy:prepare": "npm install && npm run build"
+    "deploy:prepare": "npm install"
   },
   "dependencies": {
     "@hirosystems/clarinet-sdk": "^2.3.0",
