@@ -577,8 +577,8 @@
         </div>
     </div>
 
-    <!-- Use our custom wallet connect implementation -->
-    <script src="/stacks-connect-shim.js"></script>
+    <!-- Use the official Stacks/Leather Connect library -->
+    <script src="https://unpkg.com/@stacks/connect"></script>
     
     <script>
         // Contract configuration
@@ -592,12 +592,6 @@
         let allTasks = [];
         let statusTimeout = null;
         
-        // Stacks Connect functions - will be populated once script loads
-        let openConnect;
-        let openContractCall;
-        let encodeUtf8;
-        let encodeUint;
-        
         // DOM elements
         const connectBtn = document.getElementById('connect-wallet');
         const walletInfo = document.getElementById('wallet-info');
@@ -608,6 +602,15 @@
         const statusContainer = document.getElementById('status-container');
         const refreshBtn = document.getElementById('refresh-btn');
         const networkBadge = document.getElementById('network-badge');
+        
+        // Helper functions for encoding
+        function encodeUtf8(value) {
+            return { type: "string-utf8", value: value };
+        }
+        
+        function encodeUint(value) {
+            return { type: "uint", value: value.toString() };
+        }
         
         // Helper functions
         function showMessage(message, type = 'success', duration = 5000) {
@@ -689,23 +692,6 @@
             }
         };
         
-        // Connect wallet options
-        const connectOptions = {
-            ...appConfig,
-            onFinish: ({ userSession }) => {
-                // Save session data
-                const userData = userSession.loadUserData();
-                userAddress = userData.profile.stxAddress.testnet;
-                showMessage(`Successfully connected to wallet`, 'success');
-                updateUI();
-                fetchAllTasks();
-            },
-            onCancel: () => {
-                showMessage('Wallet connection cancelled', 'error');
-            },
-            userSession: userSession,
-        };
-        
         // Claim a task
         async function claimTask(taskId) {
             if (!userAddress) {
@@ -713,24 +699,17 @@
                 return;
             }
             
-            // Add defensive programming to prevent errors
-            if (typeof window.stacksConnect === 'undefined' || typeof window.stacksConnect.openContractCall !== 'function') {
+            // Check if connect API is available
+            if (typeof window.connect === 'undefined') {
                 showMessage("Wallet connection not ready - please try again in a moment", "error");
-                console.error("stacksConnect or openContractCall is not available");
-                return;
-            }
-            
-            // Double-check that openContractCall is available
-            if (!openContractCall) {
-                showMessage("Contract interaction unavailable - please try refreshing the page", "error");
-                console.error("openContractCall is undefined");
+                console.error("window.connect is not available");
                 return;
             }
             
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await openContractCall({
+                await window.connect.openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
@@ -771,24 +750,17 @@
                 return;
             }
             
-            // Add defensive programming to prevent errors
-            if (typeof window.stacksConnect === 'undefined' || typeof window.stacksConnect.openContractCall !== 'function') {
+            // Check if connect API is available
+            if (typeof window.connect === 'undefined') {
                 showMessage("Wallet connection not ready - please try again in a moment", "error");
-                console.error("stacksConnect or openContractCall is not available");
-                return;
-            }
-            
-            // Double-check that openContractCall is available
-            if (!openContractCall) {
-                showMessage("Contract interaction unavailable - please try refreshing the page", "error");
-                console.error("openContractCall is undefined");
+                console.error("window.connect is not available");
                 return;
             }
             
             showMessage('Creating transaction...', 'processing', 0);
             
             try {
-                await openContractCall({
+                await window.connect.openContractCall({
                     ...appConfig,
                     contractAddress: contractAddress,
                     contractName: contractName,
@@ -834,16 +806,11 @@
                 allTasks = [];
                 let tasksFound = true;
                 
-                // Check if encoding functions are available
-                if (!encodeUint) {
-                    console.warn("encodeUint function not available for API call, falling back to manual JSON encoding");
-                }
-                
                 while (tasksFound && taskId < 100) { // Limit to 100 tasks to prevent infinite loops
                     try {
                         const response = await fetch(`https://api.testnet.hiro.so/v2/contracts/call-read/${contractAddress}/${contractName}/get-task?${new URLSearchParams({
                             senderAddress: userAddress,
-                            arguments: [encodeUint ? encodeUint(taskId) : JSON.stringify({type: "uint", value: taskId.toString()})]
+                            arguments: [JSON.stringify(encodeUint(taskId))]
                         })}`);
                         
                         const data = await response.json();
@@ -971,17 +938,30 @@
         function setupEventListeners() {
             // Connect wallet event listener
             connectBtn.addEventListener('click', async () => {
-                // Double-check that openConnect is available
-                if (!openConnect) {
-                    showMessage("Wallet connection unavailable - please try refreshing the page", "error");
-                    console.error("openConnect is undefined");
-                    return;
-                }
-                
                 showMessage('Connecting to Leather Wallet...', 'processing');
                 try {
                     console.log('Attempting to connect to wallet...');
-                    await openConnect(connectOptions);
+                    
+                    // Use the official connect method
+                    window.connect.showConnect({
+                        appDetails: {
+                            name: 'Stacks Micro-Task Board',
+                            icon: window.location.origin + '/icon.png',
+                        },
+                        redirectTo: '/',
+                        onFinish: (data) => {
+                            console.log('Wallet connected successfully:', data);
+                            // Save the user's address
+                            userAddress = data.address;
+                            showMessage(`Successfully connected to wallet`, 'success');
+                            updateUI();
+                            fetchAllTasks();
+                        },
+                        onCancel: () => {
+                            showMessage('Wallet connection cancelled', 'error');
+                        },
+                        userSession: userSession,
+                    });
                 } catch (error) {
                     console.error('Connection error:', error);
                     showMessage(`Connection error: ${error.message}`, 'error');
@@ -1006,17 +986,17 @@
                 submitBtn.innerHTML = 'Processing...';
                 showMessage('Creating transaction...', 'processing', 0);
                 
-                // Double-check that openContractCall is available
-                if (!openContractCall) {
-                    showMessage("Contract interaction unavailable - please try refreshing the page", "error");
-                    console.error("openContractCall is undefined");
+                // Check if connect API is available
+                if (typeof window.connect === 'undefined') {
+                    showMessage("Wallet connection not ready - please try again in a moment", "error");
+                    console.error("window.connect is not available");
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = 'Post Task';
                     return;
                 }
                 
                 try {
-                    await openContractCall({
+                    await window.connect.openContractCall({
                         ...appConfig,
                         contractAddress: contractAddress,
                         contractName: contractName,
@@ -1074,84 +1054,31 @@
             });
         }
         
-        // Initialize application after script is loaded
+        // Initialize application with the official Stacks Connect library
         async function initializeApp() {
             try {
-                console.log('Initializing Stacks Connect from window.stacksConnect');
+                console.log('Initializing with official Stacks Connect library');
                 
-                // Dump complete debug info to console
-                console.log('DETAILED DEBUG INFO:');
-                console.log('Window object has stacksConnect:', typeof window.stacksConnect);
-                console.log('Window object has Connect:', typeof window.Connect);
-                if (window.stacksConnect) {
-                    console.log('stacksConnect keys:', Object.keys(window.stacksConnect));
-                    console.log('stacksConnect openConnect type:', typeof window.stacksConnect.openConnect);
-                }
-                if (window.Connect) {
-                    console.log('Connect keys:', Object.keys(window.Connect));
-                    console.log('Connect openConnect type:', typeof window.Connect.openConnect);
-                }
-                
-                // Debug info - log what's available on window
-                console.log('Available objects on window:', Object.keys(window).filter(k => 
-                    k.toLowerCase().includes('connect') || 
-                    k.toLowerCase().includes('stacks')));
-                
-                // Always make sure global functions are defined for HTML
+                // Expose task functions to the global scope
                 window.claimTask = claimTask;
                 window.approveTask = approveTask;
                 
-                if (window.stacksConnect && typeof window.stacksConnect.openConnect === 'function') {
-                    console.log('Successfully found openConnect in window.stacksConnect');
-                    
-                    // Get the functions from window.stacksConnect
-                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.stacksConnect);
-                    
-                    // Set up event listeners once we have the functions
-                    setupEventListeners();
-                } else if (window.Connect && typeof window.Connect.openConnect === 'function') {
-                    // Try alternate location (sometimes it loads as window.Connect)
-                    console.log('Found openConnect in window.Connect instead');
-                    
-                    // Get the functions from window.Connect
-                    ({ openConnect, openContractCall, encodeUtf8, encodeUint } = window.Connect);
-                    
-                    // Set up event listeners once we have the functions
-                    setupEventListeners();
-                } else {
-                    // Last resort: loop through all properties on window to find the Connect API
-                    console.log('Searching all window properties for Connect API...');
-                    
-                    for (const key of Object.keys(window)) {
-                        const obj = window[key];
-                        if (obj && typeof obj === 'object' && typeof obj.openConnect === 'function') {
-                            console.log(`Found Connect API in window.${key}`);
-                            ({ openConnect, openContractCall, encodeUtf8, encodeUint } = obj);
-                            setupEventListeners();
-                            return;
-                        }
-                    }
-                    
-                    console.error('window.stacksConnect or openConnect not available:', window.stacksConnect);
-                    console.error('window.Connect:', window.Connect);
-                    showMessage("Failed to initialize wallet connection. Please try a different browser or check your internet connection.", "error");
-                }
+                // Set up the event listeners
+                setupEventListeners();
+                
+                console.log('App initialized successfully');
             } catch (error) {
                 console.error('Error initializing application:', error);
                 showMessage("An error occurred while initializing the application", "error");
             }
         }
         
-        // Wait for DOM to load, then initialize the app directly with our custom shim
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('DOM loaded, initializing with local stacks-connect-shim.js');
+        // Wait for DOM to load, then initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing app');
             
-            // Our custom shim is already loaded in the head, so we can initialize directly
-            setTimeout(() => {
-                // Just in case we need a little time for our shim to initialize
-                console.log('Initializing app with custom wallet connector');
-                initializeApp();
-            }, 100);
+            // Give a brief delay to ensure the connect library is loaded
+            setTimeout(initializeApp, 500);
         });
     </script>
 </body>
